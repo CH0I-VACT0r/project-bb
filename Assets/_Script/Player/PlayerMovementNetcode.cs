@@ -1,6 +1,7 @@
 using System.Collections;
 using Unity.Netcode;
 using UnityEngine;
+using UnityEngine.UI;
 using UnityEngine.InputSystem;
 
 [RequireComponent(typeof(Rigidbody2D))]
@@ -20,15 +21,26 @@ public class PlayerMovementNetcode : NetworkBehaviour
     public float comboWindow = 2f;
     public float dashCooldown = 3f;
 
+    [Header("UI Settings")]
+    public Image dashTimerUI;
+    public Image dashTimerBG;
+
     public NetworkVariable<int> currentDashCount = new NetworkVariable<int>(2);
     public NetworkVariable<bool> isDashCooldown = new NetworkVariable<bool>(false);
 
     private float serverComboTimer = 0f;
+    private int localDashCount;
+    private float localComboTimer = 0f;
+    private float localCooldownTimer = 0f;
+    private bool isLocalCooldown = false;
 
     void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
         stats = GetComponent<PlayerStatManager>();
+
+        if (dashTimerUI != null) dashTimerUI.enabled = false;
+        if (dashTimerBG != null) dashTimerBG.enabled = false;
     }
 
     public override void OnNetworkSpawn()
@@ -37,16 +49,25 @@ public class PlayerMovementNetcode : NetworkBehaviour
         {
             currentDashCount.Value = maxDashCount;
         }
+
+        if (IsOwner)
+        {
+            localDashCount = maxDashCount;
+
+            CameraFollow camFollow = Camera.main.GetComponent<CameraFollow>();
+            if (camFollow != null)
+            {
+                camFollow.target = this.transform;
+            }
+        }
     }
 
     void Update()
     {
-        if (IsServer)
-        {
-            UpdateServerDashTimers();
-        }
+        if (IsServer) UpdateServerDashTimers();
 
         if (!IsOwner) return;
+        UpdateLocalDashUI();
         if (isDashing) return;
 
         InputMovement();
@@ -70,10 +91,72 @@ public class PlayerMovementNetcode : NetworkBehaviour
 
     private void HandleDashInput()
     {
-        if (Input.GetKeyDown(KeyCode.Space) && currentDashCount.Value > 0 && !isDashCooldown.Value)
+        if (Input.GetKeyDown(KeyCode.Space) && localDashCount > 0 && !isLocalCooldown)
         {
             StartCoroutine(LocalDashRoutine());
             RequestDashServerRpc();
+
+            localDashCount--;
+
+            if (localDashCount > 0)
+            {
+                localComboTimer = comboWindow;
+            }
+            else
+            {
+                isLocalCooldown = true;
+                localCooldownTimer = dashCooldown;
+                localComboTimer = 0f;
+            }
+        }
+    }
+
+    private void UpdateLocalDashUI()
+    {
+        if (dashTimerUI == null) return;
+
+        // 대시 쿨타임 (빨간색)
+        if (isLocalCooldown)
+        {
+            localCooldownTimer -= Time.deltaTime;
+
+            dashTimerUI.enabled = true;
+            if (dashTimerBG != null) dashTimerBG.enabled = true;
+
+            dashTimerUI.color = Color.red;
+            dashTimerUI.fillAmount = 1f - (localCooldownTimer / dashCooldown);
+
+            if (localCooldownTimer <= 0f)
+            {
+                isLocalCooldown = false;
+                localDashCount = maxDashCount;
+
+                dashTimerUI.enabled = false;
+                if (dashTimerBG != null) dashTimerBG.enabled = false;
+            }
+        }
+        // 대쉬 대기 (노란색)
+        else if (localComboTimer > 0f)
+        {
+            localComboTimer -= Time.deltaTime;
+
+            dashTimerUI.enabled = true;
+            if (dashTimerBG != null) dashTimerBG.enabled = true;
+
+            dashTimerUI.color = Color.yellow;
+            dashTimerUI.fillAmount = localComboTimer / comboWindow;
+
+            if (localComboTimer <= 0f)
+            {
+                isLocalCooldown = true;
+                localCooldownTimer = dashCooldown;
+                localComboTimer = 0f;
+            }
+        }
+        else
+        {
+            dashTimerUI.enabled = false;
+            if (dashTimerBG != null) dashTimerBG.enabled = false; // 배경 끄기
         }
     }
 

@@ -53,6 +53,8 @@ public class WeaponControllerNetcode : NetworkBehaviour
 
     void Update()
     {
+        UpdateOrbitAngle();
+
         switch (currentState)
         {
             case WeaponState.Orbiting:
@@ -67,23 +69,29 @@ public class WeaponControllerNetcode : NetworkBehaviour
                 HandleReturnMove();
                 break;
         }
+
+        UpdateSortingOrder();
+    }
+
+    private void UpdateOrbitAngle()
+    {
+        currentAngle += weaponData.orbitSpeed * Time.deltaTime;
+        currentAngle %= 360f;
+    }
+
+    private Vector3 GetExpectedOrbitPosition()
+    {
+        float rad = currentAngle * Mathf.Deg2Rad;
+
+        float xOffset = Mathf.Cos(rad) * weaponData.orbitRadius;
+        float yOffset = Mathf.Sin(rad) * (weaponData.orbitRadius * orbitYMultiplier);
+
+        return playerTransform.position + new Vector3(xOffset, yOffset, 0);
     }
 
     private void HandleOrbit()
     {
-        currentAngle += weaponData.orbitSpeed * Time.deltaTime;
-        currentAngle %= 360f;
-
-        float rad = currentAngle * Mathf.Deg2Rad;
-
-        // X축은 기존 반경 그대로, Y축은 orbitYMultiplier를 곱해 납작하게 만듭니다.
-        float xOffset = Mathf.Cos(rad) * weaponData.orbitRadius;
-        float yOffset = Mathf.Sin(rad) * (weaponData.orbitRadius * orbitYMultiplier);
-
-        transform.position = playerTransform.position + new Vector3(xOffset, yOffset, 0);
-
-        // 매 프레임 이동 후 앞뒤 레이어 정렬 수행
-        UpdateSortingOrder();
+        transform.position = GetExpectedOrbitPosition();
     }
 
     private void UpdateSortingOrder()
@@ -181,9 +189,11 @@ public class WeaponControllerNetcode : NetworkBehaviour
 
     private void HandleReturnMove()
     {
-        transform.position = Vector3.MoveTowards(transform.position, playerTransform.position, weaponData.travelSpeed * Time.deltaTime);
+        Vector3 targetOrbitPos = GetExpectedOrbitPosition();
 
-        if (Vector3.Distance(transform.position, playerTransform.position) < weaponData.orbitRadius)
+        transform.position = Vector3.MoveTowards(transform.position, targetOrbitPos, weaponData.travelSpeed * Time.deltaTime);
+
+        if (Vector3.Distance(transform.position, targetOrbitPos) < 0.1f)
         {
             currentState = WeaponState.Orbiting;
         }

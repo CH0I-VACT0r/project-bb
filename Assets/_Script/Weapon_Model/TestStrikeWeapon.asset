@@ -16,9 +16,9 @@ MonoBehaviour:
   weaponType: 0
   baseDamage: 10
   baseCooldown: 2
-  attackRange: 2
+  attackRange: 0.5
   travelDistance: 2
-  travelSpeed: 7.5
+  travelSpeed: 9
   slashAngle: 90
   projectilePrefab: {fileID: 0}
   projectileSpeed: 15
