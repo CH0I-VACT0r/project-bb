@@ -28,6 +28,14 @@ public class WeaponControllerNetcode : NetworkBehaviour
 
     private float orbitDamageTimer = 0f;
 
+    [Header("Dynamic Orbit Settings")]
+    public float minOrbitSpeed = 90f; // 최소 공전 속도
+    public float maxOrbitSpeed = 180f; // 최대 공전 속도
+
+    private float targetOrbitSpeed;
+    private float currentOrbitSpeed;
+    private float previousAngle = 0f;
+
     private enum WeaponState { Orbiting, Attacking, Returning }
     private WeaponState currentState = WeaponState.Orbiting;
 
@@ -56,6 +64,9 @@ public class WeaponControllerNetcode : NetworkBehaviour
         {
             playerSprite = playerTransform.GetComponent<SpriteRenderer>();
         }
+
+        targetOrbitSpeed = weaponData.orbitSpeed;
+        currentOrbitSpeed = weaponData.orbitSpeed;
     }
 
     void Update()
@@ -82,7 +93,22 @@ public class WeaponControllerNetcode : NetworkBehaviour
 
     private void UpdateOrbitAngle()
     {
-        currentAngle += weaponData.orbitSpeed * Time.deltaTime;
+        // 목표 속도를 향해 부드럽게 가감속 보간
+        currentOrbitSpeed = Mathf.Lerp(currentOrbitSpeed, targetOrbitSpeed, Time.deltaTime * 3f);
+
+        previousAngle = currentAngle;
+        currentAngle += currentOrbitSpeed * Time.deltaTime;
+
+        // 각도가 90도를 돌파하는 순간 (가장 높은 Y축 = 플레이어 등 뒤)
+        if (previousAngle < 90f && currentAngle >= 90f)
+        {
+            // 5의 배수 단위로 무작위 목표 속도 산출
+            int minMultiple = Mathf.RoundToInt(minOrbitSpeed / 5f);
+            int maxMultiple = Mathf.RoundToInt(maxOrbitSpeed / 5f);
+
+            targetOrbitSpeed = Random.Range(minMultiple, maxMultiple + 1) * 5;
+        }
+
         currentAngle %= 360f;
     }
 

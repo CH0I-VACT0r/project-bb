@@ -26,6 +26,7 @@ public class EnemyStatManager : NetworkBehaviour, IDamageable
 
         currentHP.Value -= damageAmount;
 
+        Debug.Log($"받은 데미지: {damageAmount}");
         if (currentHP.Value <= 0)
         {
             Die();

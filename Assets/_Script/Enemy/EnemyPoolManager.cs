@@ -43,8 +43,7 @@ public class EnemyPoolManager : NetworkBehaviour
 
     private GameObject CreateEnemy()
     {
-        // 서버 메모리에 객체 생성
-        GameObject enemy = Instantiate(enemyPrefab);
+        GameObject enemy = Instantiate(enemyPrefab, this.transform);
         return enemy;
     }
 
