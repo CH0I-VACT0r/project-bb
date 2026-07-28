@@ -21,6 +21,13 @@ public class WeaponControllerNetcode : NetworkBehaviour
     private ContactFilter2D enemyFilter;
     private Collider2D[] hitBuffer = new Collider2D[64];
 
+    [Header("Orbit Damage Settings")]
+    public float orbitDamageTickRate = 0.5f; // 타격 주기 (0.5초마다 타격)
+    public float orbitDamageRadius = 0.5f; // 무기 자체의 타격 판정 크기
+    public float orbitDamageMultiplier = 0.5f; // 공전 데미지 배율 (기본 데미지의 50%)
+
+    private float orbitDamageTimer = 0f;
+
     private enum WeaponState { Orbiting, Attacking, Returning }
     private WeaponState currentState = WeaponState.Orbiting;
 
@@ -92,6 +99,30 @@ public class WeaponControllerNetcode : NetworkBehaviour
     private void HandleOrbit()
     {
         transform.position = GetExpectedOrbitPosition();
+
+        if (IsServer && weaponData.weaponType != WeaponType.Ranged)
+        {
+            orbitDamageTimer -= Time.deltaTime;
+            if (orbitDamageTimer <= 0f)
+            {
+                PerformOrbitDamageServer();
+                orbitDamageTimer = orbitDamageTickRate;
+            }
+        }
+    }
+
+    private void PerformOrbitDamageServer()
+    {
+        int hitCount = Physics2D.OverlapCircle(transform.position, orbitDamageRadius, enemyFilter, hitBuffer);
+
+        // 밸런스를 위해 공전 피해량은 배율(Multiplier)을 적용
+        float finalDamage = (playerStats.AttackDamage.Value + weaponData.baseDamage) * orbitDamageMultiplier;
+
+        for (int i = 0; i < hitCount; i++)
+        {
+            IDamageable damageableTarget = hitBuffer[i].GetComponent<IDamageable>();
+            damageableTarget?.TakeDamage(finalDamage);
+        }
     }
 
     private void UpdateSortingOrder()
