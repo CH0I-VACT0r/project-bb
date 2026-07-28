@@ -116,9 +116,10 @@ public class WeaponControllerNetcode : NetworkBehaviour
         currentCooldown -= Time.deltaTime;
         if (currentCooldown <= 0f)
         {
-            // Mouse.current 참조 삭제 및 기존 Input.mousePosition 사용
-            Vector3 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+            Vector3 mouseScreenPos = Mouse.current.position.ReadValue();
+            Vector3 mousePos = Camera.main.ScreenToWorldPoint(mouseScreenPos);
             mousePos.z = 0;
+
             Vector3 direction = (mousePos - transform.position).normalized;
 
             RequestAttackServerRpc(direction);

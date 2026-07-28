@@ -607,6 +607,72 @@ MonoBehaviour:
   dashCooldown: 3
   dashTimerUI: {fileID: 957309792731848494}
   dashTimerBG: {fileID: 7892087690101556506}
+  moveAction:
+    m_Name: Move
+    m_Type: 0
+    m_ExpectedControlType: 
+    m_Id: 7f13572c-f66e-4e5b-a29e-998922107d15
+    m_Processors: 
+    m_Interactions: 
+    m_SingletonActionBindings:
+    - m_Name: 2D Vector
+      m_Id: d6be2dd2-d69a-4933-93f3-63ad329f53ed
+      m_Path: 2DVector
+      m_Interactions: 
+      m_Processors: 
+      m_Groups: 
+      m_Action: Move
+      m_Flags: 4
+    - m_Name: up
+      m_Id: 70da2a8c-6eb3-4dad-be12-0af5c059b78f
+      m_Path: <Keyboard>/w
+      m_Interactions: 
+      m_Processors: 
+      m_Groups: 
+      m_Action: Move
+      m_Flags: 8
+    - m_Name: down
+      m_Id: 4de5b847-12f2-4dc4-8f00-ab6ad45564ff
+      m_Path: <Keyboard>/s
+      m_Interactions: 
+      m_Processors: 
+      m_Groups: 
+      m_Action: Move
+      m_Flags: 8
+    - m_Name: left
+      m_Id: 886cde6a-08f2-40d4-8cf8-4f923fc8a80d
+      m_Path: <Keyboard>/a
+      m_Interactions: 
+      m_Processors: 
+      m_Groups: 
+      m_Action: Move
+      m_Flags: 8
+    - m_Name: right
+      m_Id: 74d262c1-0acb-4078-8921-65e6f102b222
+      m_Path: <Keyboard>/d
+      m_Interactions: 
+      m_Processors: 
+      m_Groups: 
+      m_Action: Move
+      m_Flags: 8
+    m_Flags: 0
+  dashAction:
+    m_Name: Dash
+    m_Type: 0
+    m_ExpectedControlType: 
+    m_Id: 3da86b7e-e4b4-4189-92d3-c1ab5c90a5c5
+    m_Processors: 
+    m_Interactions: 
+    m_SingletonActionBindings:
+    - m_Name: 
+      m_Id: e58f223b-3986-47a7-908a-b289e8d79db4
+      m_Path: <Keyboard>/space
+      m_Interactions: 
+      m_Processors: 
+      m_Groups: 
+      m_Action: Dash
+      m_Flags: 0
+    m_Flags: 0
   currentDashCount:
     m_InternalValue: 2
   isDashCooldown:

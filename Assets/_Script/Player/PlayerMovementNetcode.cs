@@ -59,6 +59,18 @@ public class PlayerMovementNetcode : NetworkBehaviour
             {
                 camFollow.target = this.transform;
             }
+
+            InputManager.Instance.Controls.Gameplay.Enable();
+            InputManager.Instance.Controls.Gameplay.Dash.performed += OnDashPerformed;
+        }
+    }
+
+    public override void OnNetworkDespawn()
+    {
+        if (IsOwner)
+        {
+            InputManager.Instance.Controls.Gameplay.Dash.performed -= OnDashPerformed;
+            InputManager.Instance.Controls.Gameplay.Disable();
         }
     }
 
@@ -70,28 +82,21 @@ public class PlayerMovementNetcode : NetworkBehaviour
         UpdateLocalDashUI();
         if (isDashing) return;
 
-        InputMovement();
-        HandleDashInput();
+        movement = InputManager.Instance.Controls.Gameplay.Move.ReadValue<Vector2>().normalized;
     }
 
     void FixedUpdate()
     {
         if (!IsOwner) return;
         if (isDashing) return;
-
-        // Unity 6 API ¹Ý¿µ: velocity -> linearVelocity
         rb.linearVelocity = movement.normalized * stats.MoveSpeed.Value;
     }
 
-    private void InputMovement()
+    private void OnDashPerformed(InputAction.CallbackContext context)
     {
-        movement.x = Input.GetAxisRaw("Horizontal");
-        movement.y = Input.GetAxisRaw("Vertical");
-    }
+        if (isDashing) return;
 
-    private void HandleDashInput()
-    {
-        if (Input.GetKeyDown(KeyCode.Space) && localDashCount > 0 && !isLocalCooldown)
+        if (localDashCount > 0 && !isLocalCooldown)
         {
             StartCoroutine(LocalDashRoutine());
             RequestDashServerRpc();
