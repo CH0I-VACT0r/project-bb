@@ -5,6 +5,9 @@ using System.Collections.Generic;
 
 public class PlayerStatManager : NetworkBehaviour
 {
+    [Header("Class Setup")]
+    public PlayerClassDataSO classData;
+
     [Header("1. Survival Stats")]
     public NetworkVariable<float> MaxHealth = new NetworkVariable<float>(100f);
     public NetworkVariable<float> CurrentHealth = new NetworkVariable<float>(100f);
@@ -44,7 +47,37 @@ public class PlayerStatManager : NetworkBehaviour
     {
         if (IsServer)
         {
+            // SO 데이터가 연결되어 있다면 기본 스탯을 덮어씌움
+            if (classData != null)
+            {
+                MaxHealth.Value = classData.maxHealth;
+                HealthRegen.Value = classData.healthRegen;
+                Defense.Value = classData.defense;
+                MagicDefense.Value = classData.magicDefense;
+                Evasion.Value = classData.evasion;
+
+                MaxShield.Value = classData.maxShield;
+                ShieldRegenRate.Value = classData.shieldRegenRate;
+                ShieldResetTime.Value = classData.shieldResetTime;
+
+                AttackDamage.Value = classData.attackDamage;
+                AbilityPower.Value = classData.abilityPower;
+                CooldownReduction.Value = classData.cooldownReduction;
+                CritChance.Value = classData.critChance;
+                CritDamage.Value = classData.critDamage;
+                PhysicalPenetration.Value = classData.physicalPenetration;
+                MagicPenetration.Value = classData.magicPenetration;
+
+                MoveSpeed.Value = classData.moveSpeed;
+                Luck.Value = classData.luck;
+                Charisma.Value = classData.charisma;
+
+                StatusResistance.Value = classData.statusResistance;
+            }
+
+            // 런타임 현재 체력/쉴드를 최대치로 초기화
             CurrentHealth.Value = MaxHealth.Value;
+            CurrentShield.Value = MaxShield.Value;
         }
     }
 

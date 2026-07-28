@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 811b79ebf04c76249b7a9c4358c73b5b, type: 3}
+  m_Name: Barbarian
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerClassDataSO
+  className: Warrior
+  maxHealth: 100
+  healthRegen: 1
+  defense: 10
+  magicDefense: 10
+  evasion: 0
+  maxShield: 50
+  shieldRegenRate: 5
+  shieldResetTime: 5
+  attackDamage: 20
+  abilityPower: 0
+  cooldownReduction: 0
+  critChance: 5
+  critDamage: 150
+  physicalPenetration: 0
+  magicPenetration: 0
+  moveSpeed: 5
+  luck: 1
+  charisma: 1
+  statusResistance: 0
