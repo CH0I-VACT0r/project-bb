@@ -11,6 +11,7 @@ public struct DamageInfo
     // 물리 넉백 관련
     public Vector3 knockbackDir;
     public float knockbackForce;
+    public bool isCritical;
 }
 
 public interface IDamageable

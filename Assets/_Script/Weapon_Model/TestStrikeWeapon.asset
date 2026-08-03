@@ -39,6 +39,17 @@ MonoBehaviour:
     projectileSpeed: 0
     projectileBehavior: 0
     knockbackForce: 0
+  - stepName: "\uB9C8\uC9C0\uB9C9 \uD0C0"
+    actionTypes: 5
+    stepDelay: 0.3
+    attackRange: 0.5
+    slashAngle: 360
+    projectilePrefab: {fileID: 0}
+    projectileSpeed: 0
+    projectileBehavior: 0
+    knockbackForce: 1
   comboWindow: 1
   orbitRadius: 0.75
   orbitSpeed: 90
+  travelDistance: 0.5
+  travelSpeed: 20

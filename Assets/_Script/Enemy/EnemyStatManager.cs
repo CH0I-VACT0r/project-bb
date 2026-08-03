@@ -47,6 +47,7 @@ public class EnemyStatManager : NetworkBehaviour, IDamageable
         float effectiveEvasion = Mathf.Max(0f, evasion - info.attackerAccuracy);
         if (Random.Range(0f, 100f) < effectiveEvasion)
         {
+            ShowDamagePopupClientRpc(0f, transform.position, false, true);
             return;
         }
 
@@ -63,6 +64,7 @@ public class EnemyStatManager : NetworkBehaviour, IDamageable
         }
 
         currentHP.Value -= finalDamage;
+        ShowDamagePopupClientRpc(finalDamage, transform.position, info.isCritical, false);
 
         if (rb != null && info.knockbackForce > 0f)
         {
@@ -72,6 +74,16 @@ public class EnemyStatManager : NetworkBehaviour, IDamageable
         if (currentHP.Value <= 0)
         {
             Die();
+        }
+    }
+
+    [ClientRpc]
+    private void ShowDamagePopupClientRpc(float damage, Vector3 position, bool isCritical, bool isMiss)
+    {
+        if (DamagePopupManager.Instance != null)
+        {
+            Vector3 randomOffset = new Vector3(Random.Range(-0.3f, 0.3f), Random.Range(0f, 0.5f), 0);
+            DamagePopupManager.Instance.CreatePopup(position + randomOffset, damage, isCritical, isMiss);
         }
     }
 
