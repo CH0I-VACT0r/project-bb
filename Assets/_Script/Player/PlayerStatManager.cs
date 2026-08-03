@@ -1,7 +1,6 @@
 using UnityEngine;
 using Unity.Netcode;
-using System.Collections;
-using System.Collections.Generic;
+using System;
 
 public class PlayerStatManager : NetworkBehaviour
 {
@@ -43,6 +42,8 @@ public class PlayerStatManager : NetworkBehaviour
 
     // 상태 이상 리스트
     public enum StatusType { Stun, Burn, Freeze, Shock, Poison, Bleed }
+
+    public event Action OnShieldBroken;
 
     public override void OnNetworkSpawn()
     {
@@ -113,7 +114,7 @@ public class PlayerStatManager : NetworkBehaviour
     }
 
     // 데미지 입었을 때 호출 (서버 전용)
-    public void TakeDamage(float damageAmount, AttackAttribute attackType, float attackerAccuracy, float attackerPenetration)
+    public void TakeDamage(DamageInfo info)
     {
         if (!IsServer) return;
 
@@ -122,50 +123,45 @@ public class PlayerStatManager : NetworkBehaviour
             return;
         }
 
-        // 1. 회피 연산 (Evasion vs Accuracy)
-        // 플레이어의 회피율에서 공격자의 명중 수치를 뺍니다. (최소 0%)
-        float effectiveEvasion = Mathf.Max(0f, Evasion.Value - attackerAccuracy);
-
-        // 0 ~ 100 사이의 난수를 뽑아 실효 회피율보다 낮으면 회피(Miss) 성공
-        if (Random.Range(0f, 100f) < effectiveEvasion)
+        // 회피 연산
+        float effectiveEvasion = Mathf.Max(0f, Evasion.Value - info.attackerAccuracy);
+        if (UnityEngine.Random.Range(0f, 100f) < effectiveEvasion)
         {
             return;
         }
 
-        // 회피에 실패하여 피격이 확정되었으므로 쉴드 재생 대기시간을 초기화합니다.
+        // 회피 실패 시 쉴드 재생 대기시간 초기화
         lastDamageTime = Time.time;
 
-        // 2. 쉴드 연산 (천상의 보호막 - 1회 피해 무효화)
+        // 쉴드 연산
         if (CurrentShield.Value >= 1f)
         {
             CurrentShield.Value -= 1f; // 쉴드 1 스택 차감
-            return; // 쉴드가 방어했으므로 체력 연산 생략
+            OnShieldBroken?.Invoke(); // 쉴드 파괴 이벤트 발생
+            GrantInvincibility(0.2f);  // 쉴드 파괴 후 무적 0.2초 부여
+
+            return;
         }
 
-        // 3. 방어력 및 관통 연산 (고정 감소 방식)
-        float finalDamage = damageAmount;
+        // 방어력 및 관통 연산
+        float finalDamage = info.damageAmount;
 
-        if (attackType == AttackAttribute.Physical)
+        if (info.attackType == AttackAttribute.Physical)
         {
-            // 실효 방어력 = 플레이어 물리 방어 - 공격자 물리 관통
-            float effectiveDefense = Mathf.Max(0f, Defense.Value - attackerPenetration);
-
-            // 데미지 = 기본 데미지 - 실효 방어력 (단, 최소 데미지는 1로 고정하여 완전 면역 방지)
+            float effectiveDefense = Mathf.Max(0f, Defense.Value - info.attackerPenetration);
             finalDamage = Mathf.Max(1f, finalDamage - effectiveDefense);
         }
-        else if (attackType == AttackAttribute.Magic)
+        else if (info.attackType == AttackAttribute.Magic)
         {
-            // 실효 마법 저항 = 플레이어 마법 저항 - 공격자 마법 관통
-            float effectiveMagicDefense = Mathf.Max(0f, MagicDefense.Value - attackerPenetration);
-
+            float effectiveMagicDefense = Mathf.Max(0f, MagicDefense.Value - info.attackerPenetration);
             finalDamage = Mathf.Max(1f, finalDamage - effectiveMagicDefense);
         }
 
-        // 4. 최종 체력 차감
+        // 최종 체력 차감
         CurrentHealth.Value -= finalDamage;
-        GrantInvincibility(0.2f);
 
-        // 사망 판정
+        GrantInvincibility(0.2f); // 피격 무적
+
         if (CurrentHealth.Value <= 0)
         {
             Die();
