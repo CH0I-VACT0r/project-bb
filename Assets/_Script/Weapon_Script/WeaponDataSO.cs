@@ -57,4 +57,8 @@ public class WeaponDataSO : ScriptableObject
     [Header("Orbit (Passive Settings)")]
     public float orbitRadius = 2f;
     public float orbitSpeed = 120f;
+
+    [Header("Weapon Movement (Attack/Return)")]
+    public float travelDistance = 1f;
+    public float travelSpeed = 10f;
 }

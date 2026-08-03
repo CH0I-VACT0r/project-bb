@@ -13,14 +13,32 @@ MonoBehaviour:
   m_Name: TestStrikeWeapon
   m_EditorClassIdentifier: Assembly-CSharp::WeaponDataSO
   weaponName: Test
-  weaponType: 0
+  attackAttribute: 0
+  isBossPriority: 1
+  autoTargetRange: 10
   baseDamage: 10
+  adScaling: 1
+  apScaling: 0
   baseCooldown: 2
-  attackRange: 0.5
-  travelDistance: 2
-  travelSpeed: 9
-  slashAngle: 90
-  projectilePrefab: {fileID: 0}
-  projectileSpeed: 15
+  actionSteps:
+  - stepName: "\uBCA0\uAE30 1"
+    actionTypes: 5
+    stepDelay: 0.3
+    attackRange: 1
+    slashAngle: 90
+    projectilePrefab: {fileID: 0}
+    projectileSpeed: 0
+    projectileBehavior: 0
+    knockbackForce: 0
+  - stepName: "\uBCA0\uAE30 2"
+    actionTypes: 5
+    stepDelay: 0.3
+    attackRange: 1
+    slashAngle: 90
+    projectilePrefab: {fileID: 0}
+    projectileSpeed: 0
+    projectileBehavior: 0
+    knockbackForce: 0
+  comboWindow: 1
   orbitRadius: 0.75
   orbitSpeed: 90

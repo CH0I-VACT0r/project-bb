@@ -2,7 +2,6 @@ using System.Collections;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using UnityEngine.Rendering;
 
 public class WeaponControllerNetcode : NetworkBehaviour
 {
@@ -12,7 +11,7 @@ public class WeaponControllerNetcode : NetworkBehaviour
     public LayerMask enemyLayer;
 
     [Header("Visuals")]
-    public SpriteRenderer aoeIndicator;
+    public AoEIndicatorMesh aoeIndicator;
 
     [Header("Rendering")]
     public float orbitYMultiplier = 0.5f;
@@ -22,11 +21,11 @@ public class WeaponControllerNetcode : NetworkBehaviour
     private ContactFilter2D enemyFilter;
     private Collider2D[] hitBuffer = new Collider2D[64];
 
-    [Header("Orbit Damage Settings")]
-    public float orbitDamageTickRate = 0.5f;
-    public float orbitDamageRadius = 0.5f;
-    public float orbitDamageMultiplier = 0.5f;
-    private float orbitDamageTimer = 0f;
+    public NetworkVariable<Vector2> networkAimDir = new NetworkVariable<Vector2>(
+        Vector2.right,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server
+    );
 
     [Header("Dynamic Orbit Settings")]
     public float minOrbitSpeed = 90f;
@@ -37,10 +36,14 @@ public class WeaponControllerNetcode : NetworkBehaviour
     private float previousAngle = 0f;
     private float currentAngle = 0f;
 
-    // 콤보 시스템 상태 변수
+    private enum WeaponState { Orbiting, Attacking, Returning }
+    private WeaponState currentState = WeaponState.Orbiting;
+    private Vector3 attackTargetPos;
+
     private int currentComboIndex = 0;
     private float lastAttackTime = 0f;
     private bool isAttacking = false;
+    private Coroutine aoeCoroutine;
 
     #region Unity Lifecycle
     void Awake()
@@ -52,11 +55,31 @@ public class WeaponControllerNetcode : NetworkBehaviour
 
         weaponSprite = GetComponent<SpriteRenderer>();
 
-        if (aoeIndicator != null) aoeIndicator.enabled = false;
+        if (aoeIndicator == null)
+        {
+            GameObject indicatorObj = new GameObject("Dynamic_AoE_Indicator");
+            aoeIndicator = indicatorObj.AddComponent<AoEIndicatorMesh>();
+
+            MeshRenderer mr = indicatorObj.GetComponent<MeshRenderer>();
+            mr.material = new Material(Shader.Find("Sprites/Default"));
+            mr.material.color = new Color(1f, 0f, 0f, 0.4f);
+            mr.sortingOrder = 100;
+
+            indicatorObj.SetActive(false);
+        }
+
+        if (aoeIndicator != null)
+        {
+            aoeIndicator.transform.SetParent(this.transform);
+            aoeIndicator.transform.localPosition = Vector3.zero;
+        }
     }
 
     void Start()
     {
+        // 왜곡 방지: 무기를 플레이어의 자식에서 강제 분리
+        transform.SetParent(null);
+
         if (playerTransform != null)
         {
             playerSprite = playerTransform.GetComponent<SpriteRenderer>();
@@ -68,49 +91,152 @@ public class WeaponControllerNetcode : NetworkBehaviour
 
     void Update()
     {
+        // 플레이어 파괴 시 무기도 즉시 파기하여 에러 방지
+        if (playerTransform == null)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
         UpdateOrbitAngle();
-        HandleOrbit(); // 공전 무기는 패시브로 상시 작동
-        UpdateSortingOrder();
 
         if (IsOwner)
         {
+            Vector3 mouseScreenPos = Mouse.current.position.ReadValue();
+            Vector3 mousePos = Camera.main.ScreenToWorldPoint(mouseScreenPos);
+            mousePos.z = 0;
+            Vector2 aimDir = (mousePos - playerTransform.position).normalized;
+
+            RequestAimUpdateServerRpc(aimDir);
             HandleComboInput();
         }
+
+        switch (currentState)
+        {
+            case WeaponState.Orbiting: HandleAimingVisuals(); break;
+            case WeaponState.Attacking: HandleAttackMove(); break;
+            case WeaponState.Returning: HandleReturnMove(); break;
+        }
+
+        UpdateSortingOrder();
+    }
+    #endregion
+
+    #region Weapon Aiming System & Movement
+    [ServerRpc]
+    private void RequestAimUpdateServerRpc(Vector2 dir)
+    {
+        networkAimDir.Value = dir;
+    }
+
+    private void HandleAimingVisuals()
+    {
+        transform.position = GetExpectedOrbitPosition();
+        Vector2 aimDir = networkAimDir.Value;
+        float angle = Mathf.Atan2(aimDir.y, aimDir.x) * Mathf.Rad2Deg;
+        transform.rotation = Quaternion.Euler(0, 0, angle);
+
+        if (weaponSprite != null) weaponSprite.flipY = (aimDir.x < 0);
+    }
+
+    private Vector3 GetExpectedOrbitPosition()
+    {
+        float rad = currentAngle * Mathf.Deg2Rad;
+        float xOffset = Mathf.Cos(rad) * weaponData.orbitRadius;
+        float yOffset = Mathf.Sin(rad) * (weaponData.orbitRadius * orbitYMultiplier);
+        return playerTransform.position + new Vector3(xOffset, yOffset, 0);
+    }
+
+    private void UpdateOrbitAngle()
+    {
+        currentOrbitSpeed = Mathf.Lerp(currentOrbitSpeed, targetOrbitSpeed, Time.deltaTime * 3f);
+        previousAngle = currentAngle;
+        currentAngle += currentOrbitSpeed * Time.deltaTime;
+
+        if (previousAngle < 90f && currentAngle >= 90f)
+        {
+            int minMultiple = Mathf.RoundToInt(minOrbitSpeed / 5f);
+            int maxMultiple = Mathf.RoundToInt(maxOrbitSpeed / 5f);
+            targetOrbitSpeed = Random.Range(minMultiple, maxMultiple + 1) * 5;
+        }
+        currentAngle %= 360f;
+    }
+
+    private void HandleAttackMove()
+    {
+        transform.position = Vector3.MoveTowards(transform.position, attackTargetPos, weaponData.travelSpeed * Time.deltaTime);
+        if (Vector3.Distance(transform.position, attackTargetPos) < 0.1f)
+        {
+            currentState = WeaponState.Returning;
+        }
+    }
+
+    private void HandleReturnMove()
+    {
+        Vector3 orbitPos = GetExpectedOrbitPosition();
+        transform.position = Vector3.MoveTowards(transform.position, orbitPos, weaponData.travelSpeed * Time.deltaTime);
+        if (Vector3.Distance(transform.position, orbitPos) < 0.1f)
+        {
+            currentState = WeaponState.Orbiting;
+        }
+    }
+
+    private void UpdateSortingOrder()
+    {
+        if (weaponSprite == null || playerSprite == null) return;
+        weaponSprite.sortingOrder = (transform.position.y > playerTransform.position.y)
+            ? playerSprite.sortingOrder - 1 : playerSprite.sortingOrder + 1;
     }
     #endregion
 
     #region Manual Combo System
     private void HandleComboInput()
     {
-        if (isAttacking || weaponData.actionSteps == null || weaponData.actionSteps.Length == 0) return;
+        if (isAttacking || currentState != WeaponState.Orbiting || weaponData.actionSteps == null || weaponData.actionSteps.Length == 0) return;
 
         if (Mouse.current.leftButton.wasPressedThisFrame)
         {
-            // 콤보 유효 시간 초과 시 1타로 초기화
-            if (Time.time - lastAttackTime > weaponData.comboWindow)
+            if (Time.time - lastAttackTime > weaponData.comboWindow) currentComboIndex = 0;
+
+            Vector3 direction = networkAimDir.Value;
+            WeaponActionStep currentStep = weaponData.actionSteps[currentComboIndex];
+
+            bool isMeleeAttack = (currentStep.actionTypes & (WeaponTypeFlags.Melee | WeaponTypeFlags.Slash)) != 0;
+            bool isLaser = (currentStep.actionTypes & WeaponTypeFlags.Laser) != 0;
+
+            // NGO 에러 방지: 시각 효과는 서버를 거치지 않고 내 화면에서 즉시 렌더링되도록 수정
+            if (isMeleeAttack)
             {
-                currentComboIndex = 0;
+                Vector3 targetPos = transform.position + (Vector3)(direction * weaponData.travelDistance);
+                PlayAttackVisualLocal(direction, targetPos, currentComboIndex);
+            }
+            else if (isLaser)
+            {
+                if (aoeCoroutine != null) StopCoroutine(aoeCoroutine);
+                aoeCoroutine = StartCoroutine(ShowAoEVisual(direction, currentStep));
             }
 
-            Vector3 mouseScreenPos = Mouse.current.position.ReadValue();
-            Vector3 mousePos = Camera.main.ScreenToWorldPoint(mouseScreenPos);
-            mousePos.z = 0;
-
-            // 플레이어에서 마우스를 향하는 방향 벡터 산출
-            Vector3 direction = (mousePos - transform.position).normalized;
-
+            // 서버에는 시각 효과를 뺀 순수 '데미지 연산'만 요청
             RequestComboAttackServerRpc(currentComboIndex, direction);
 
-            // 해당 타격 스텝의 딜레이만큼 입력 잠금(난사 방지)
-            StartCoroutine(AttackCooldownRoutine(weaponData.actionSteps[currentComboIndex].stepDelay));
-
+            StartCoroutine(AttackCooldownRoutine(currentStep.stepDelay));
             currentComboIndex++;
-            if (currentComboIndex >= weaponData.actionSteps.Length)
-            {
-                currentComboIndex = 0; // 마지막 콤보 후 순환
-            }
+            if (currentComboIndex >= weaponData.actionSteps.Length) currentComboIndex = 0;
             lastAttackTime = Time.time;
         }
+    }
+
+    private void PlayAttackVisualLocal(Vector3 direction, Vector3 targetPos, int comboIdx)
+    {
+        attackTargetPos = targetPos;
+        currentState = WeaponState.Attacking;
+
+        if (aoeCoroutine != null) StopCoroutine(aoeCoroutine);
+        aoeCoroutine = StartCoroutine(ShowAoEVisual(direction, weaponData.actionSteps[comboIdx]));
+
+        float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
+        transform.rotation = Quaternion.Euler(0, 0, angle);
+        if (weaponSprite != null) weaponSprite.flipY = (direction.x < 0);
     }
 
     private IEnumerator AttackCooldownRoutine(float delay)
@@ -124,14 +250,12 @@ public class WeaponControllerNetcode : NetworkBehaviour
     private void RequestComboAttackServerRpc(int comboIndex, Vector3 direction)
     {
         if (comboIndex < 0 || comboIndex >= weaponData.actionSteps.Length) return;
-
         WeaponActionStep step = weaponData.actionSteps[comboIndex];
         ExecuteStepActionServer(step, direction);
     }
     #endregion
 
     #region Step Execution & Damage Calculation (Server Only)
-    // 최종 데미지 산출은 유지
     private float CalculateFinalDamage()
     {
         float adBonus = playerStats.AttackDamage.Value * weaponData.adScaling;
@@ -139,18 +263,15 @@ public class WeaponControllerNetcode : NetworkBehaviour
         return weaponData.baseDamage + adBonus + apBonus;
     }
 
-    // 공통 정보(명중, 관통)를 묶어주는 헬퍼 함수
     private DamageInfo CreateBaseDamageInfo(float baseDmg, Vector3 knockbackDirection, float knockbackForce)
     {
-        // PlayerStatManager에 연결된 classData SO에서 명중과 관통 스탯을 가져옵니다.
         float accuracy = playerStats.classData != null ? playerStats.classData.accuracy : 100f;
         float penetration = 0f;
 
         if (playerStats.classData != null)
         {
             penetration = (weaponData.attackAttribute == AttackAttribute.Physical)
-                ? playerStats.classData.physicalPenetration
-                : playerStats.classData.magicPenetration;
+                ? playerStats.classData.physicalPenetration : playerStats.classData.magicPenetration;
         }
 
         return new DamageInfo
@@ -168,11 +289,9 @@ public class WeaponControllerNetcode : NetworkBehaviour
     {
         float finalDamage = CalculateFinalDamage();
 
-        // 1. 근접 및 부채꼴 타격 연산
         if ((step.actionTypes & WeaponTypeFlags.Melee) != 0 || (step.actionTypes & WeaponTypeFlags.Slash) != 0)
         {
             int hitCount = Physics2D.OverlapCircle(transform.position, step.attackRange, enemyFilter, hitBuffer);
-
             for (int i = 0; i < hitCount; i++)
             {
                 Vector3 dirToEnemy = (hitBuffer[i].transform.position - transform.position).normalized;
@@ -183,42 +302,28 @@ public class WeaponControllerNetcode : NetworkBehaviour
                     if (angleToEnemy > step.slashAngle / 2f) continue;
                 }
 
-                // 타격 성공 시 DamageInfo 생성 후 전달
                 DamageInfo info = CreateBaseDamageInfo(finalDamage, dirToEnemy, step.knockbackForce);
-
-                IDamageable targetable = hitBuffer[i].GetComponent<IDamageable>();
-                targetable?.TakeDamage(info);
+                hitBuffer[i].GetComponent<IDamageable>()?.TakeDamage(info);
             }
         }
 
-        // 2. 투사체(Ranged) 발사 연산
         if ((step.actionTypes & WeaponTypeFlags.Ranged) != 0 && step.projectilePrefab != null)
         {
             Vector3 projDir = direction;
-
             if (step.projectileBehavior == ProjectileBehavior.Homing)
             {
                 Transform bestTarget = FindBestTarget();
-                if (bestTarget != null)
-                {
-                    projDir = (bestTarget.position - transform.position).normalized;
-                }
+                if (bestTarget != null) projDir = (bestTarget.position - transform.position).normalized;
             }
 
             GameObject projObj = Instantiate(step.projectilePrefab, transform.position, Quaternion.identity);
             ProjectileNetcode proj = projObj.GetComponent<ProjectileNetcode>();
-
-            // 투사체에게 데미지와 넉백 정보를 포함한 info를 넘겨주도록 변경해야 함.
             DamageInfo projInfo = CreateBaseDamageInfo(finalDamage, projDir, step.knockbackForce);
-
-            // 주의: ProjectileNetcode.cs의 Initialize 함수 역시 DamageInfo를 받도록 수정해야 완벽히 호환됩니다.
             proj.Initialize(projDir, step.projectileSpeed, projInfo);
-
             projObj.GetComponent<NetworkObject>().Spawn();
         }
     }
 
-    // 유도형 투사체를 위한 우선순위 오토 타겟팅
     private Transform FindBestTarget()
     {
         Collider2D[] targets = Physics2D.OverlapCircleAll(playerTransform.position, weaponData.autoTargetRange, enemyLayer);
@@ -241,74 +346,42 @@ public class WeaponControllerNetcode : NetworkBehaviour
                 if (dist < minNormalDist) { minNormalDist = dist; nearestNormalEnemy = col.transform; }
             }
         }
-
         if (weaponData.isBossPriority && nearestBoss != null) return nearestBoss;
         return nearestNormalEnemy;
     }
     #endregion
 
-    #region Orbiting System (Passive)
-    private void UpdateOrbitAngle()
+    #region Visuals
+    private IEnumerator ShowAoEVisual(Vector3 direction, WeaponActionStep step)
     {
-        currentOrbitSpeed = Mathf.Lerp(currentOrbitSpeed, targetOrbitSpeed, Time.deltaTime * 3f);
-        previousAngle = currentAngle;
-        currentAngle += currentOrbitSpeed * Time.deltaTime;
+        if (aoeIndicator == null) yield break;
+        MeshRenderer meshRenderer = aoeIndicator.GetComponent<MeshRenderer>();
 
-        if (previousAngle < 90f && currentAngle >= 90f)
+        aoeIndicator.ClearMesh();
+        aoeIndicator.transform.position = transform.position;
+
+        if ((step.actionTypes & WeaponTypeFlags.Laser) != 0)
         {
-            int minMultiple = Mathf.RoundToInt(minOrbitSpeed / 5f);
-            int maxMultiple = Mathf.RoundToInt(maxOrbitSpeed / 5f);
-            targetOrbitSpeed = Random.Range(minMultiple, maxMultiple + 1) * 5;
+            float laserWidth = step.slashAngle > 0f ? step.slashAngle / 30f : 1f;
+            aoeIndicator.DrawRectangle(step.attackRange, laserWidth);
         }
-        currentAngle %= 360f;
-    }
-
-    private Vector3 GetExpectedOrbitPosition()
-    {
-        float rad = currentAngle * Mathf.Deg2Rad;
-        float xOffset = Mathf.Cos(rad) * weaponData.orbitRadius;
-        float yOffset = Mathf.Sin(rad) * (weaponData.orbitRadius * orbitYMultiplier);
-        return playerTransform.position + new Vector3(xOffset, yOffset, 0);
-    }
-
-    private void HandleOrbit()
-    {
-        transform.position = GetExpectedOrbitPosition();
-
-        if (IsServer)
+        else
         {
-            orbitDamageTimer -= Time.deltaTime;
-            if (orbitDamageTimer <= 0f)
-            {
-                PerformOrbitDamageServer();
-                orbitDamageTimer = orbitDamageTickRate;
-            }
+            float drawAngle = ((step.actionTypes & WeaponTypeFlags.Slash) != 0) ? step.slashAngle : 360f;
+            aoeIndicator.DrawShape(step.attackRange, drawAngle, 24);
         }
-    }
 
-    private void PerformOrbitDamageServer()
-    {
-        int hitCount = Physics2D.OverlapCircle(transform.position, orbitDamageRadius, enemyFilter, hitBuffer);
-        float finalDamage = CalculateFinalDamage() * orbitDamageMultiplier;
+        float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
+        aoeIndicator.transform.rotation = Quaternion.Euler(0, 0, angle);
 
-        for (int i = 0; i < hitCount; i++)
-        {
-            Vector3 dirToEnemy = (hitBuffer[i].transform.position - transform.position).normalized;
+        aoeIndicator.gameObject.SetActive(true);
+        if (meshRenderer != null) meshRenderer.enabled = true;
 
-            // 공전 무기의 넉백은 0으로 임시 고정 (필요시 WeaponDataSO에 orbitKnockback 추가)
-            DamageInfo info = CreateBaseDamageInfo(finalDamage, dirToEnemy, 0f);
+        yield return new WaitForSeconds(0.15f);
 
-            IDamageable damageableTarget = hitBuffer[i].GetComponent<IDamageable>();
-            damageableTarget?.TakeDamage(info);
-        }
-    }
-
-    private void UpdateSortingOrder()
-    {
-        if (weaponSprite == null || playerSprite == null) return;
-        weaponSprite.sortingOrder = (transform.position.y > playerTransform.position.y)
-            ? playerSprite.sortingOrder - 1
-            : playerSprite.sortingOrder + 1;
+        if (meshRenderer != null) meshRenderer.enabled = false;
+        aoeIndicator.gameObject.SetActive(false);
+        aoeIndicator.ClearMesh();
     }
     #endregion
 }
