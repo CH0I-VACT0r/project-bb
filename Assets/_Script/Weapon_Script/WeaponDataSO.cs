@@ -1,36 +1,60 @@
 using UnityEngine;
 
-public enum WeaponType { Strike, Slash, Ranged }
+[System.Flags]
+public enum WeaponTypeFlags
+{
+    None = 0,
+    Melee = 1 << 0,      // 근접
+    Ranged = 1 << 1,     // 투사체 발사
+    Slash = 1 << 2,      // 부채꼴 슬래쉬
+    Laser = 1 << 3       // 레이저
+}
 
-[CreateAssetMenu(fileName = "NewWeaponData", menuName = "Game/Weapon Data")]
+public enum AttackAttribute { Physical, Magic }
+public enum ProjectileBehavior { Straight, Homing }
+
+[System.Serializable]
+public struct WeaponActionStep
+{
+    public string stepName; // 예: "1타: 원형 근접 타격"
+    public WeaponTypeFlags actionTypes; // 중복 선택 가능 (예: Melee + Ranged 동시 가능)
+    public float stepDelay; // 이전 타격과의 간격 (초 단위)
+
+    [Header("Area Settings")]
+    public float attackRange;
+    public float slashAngle;
+
+    [Header("Projectile Settings")]
+    public GameObject projectilePrefab;
+    public float projectileSpeed;
+    public ProjectileBehavior projectileBehavior;
+
+    // 신규 추가: 해당 타격의 넉백 파워
+    [Header("Impact Settings")]
+    public float knockbackForce;
+}
+
+[CreateAssetMenu(fileName = "New Weapon", menuName = "ScriptableObjects/WeaponData")]
 public class WeaponDataSO : ScriptableObject
 {
-    [Header("Basic Info")]
     public string weaponName;
-    public WeaponType weaponType;
+    public AttackAttribute attackAttribute;
 
-    [Header("Damage Scaling")]
+    [Header("Targeting Settings")]
+    public bool isBossPriority = true; // 보스 우선 타격 여부
+    public float autoTargetRange = 10f; // 오토 타겟 탐색 반경
+
+    [Header("Damage & Scaling")]
     public float baseDamage = 10f;
-    [Tooltip("1.0 = 100%, 0.5 = 50%")]
-    public float adScaling = 1.0f; // 기본값: AD 100% 반영
-    [Tooltip("1.0 = 100%, 0.5 = 50%")]
+    public float adScaling = 1.0f;
     public float apScaling = 0.0f;
+    public float baseCooldown = 1.0f;
 
-    [Header("Combat Stats")]
-    public float baseCooldown = 2f;
-    public float attackRange = 1f; // Strike: 반경, Slash: 부채꼴 반지름, Ranged: 투사체 사거리/수명
-    public float travelDistance = 2f;
-    public float travelSpeed = 15f;
+    [Header("Combo / Multi-Step Actions")]
+    public WeaponActionStep[] actionSteps;
+    public float comboWindow = 1.0f;
 
-    [Header("Slash Specific")]
-    [Range(0f, 360f)]
-    public float slashAngle = 90f; // 부채꼴 사잇각
-
-    [Header("Ranged Specific")]
-    public GameObject projectilePrefab; // 생성할 투사체 프리팹
-    public float projectileSpeed = 15f;
-
-    [Header("Orbit Settings")]
-    public float orbitRadius = 0.5f;
-    public float orbitSpeed = 180f;
+    [Header("Orbit (Passive Settings)")]
+    public float orbitRadius = 2f;
+    public float orbitSpeed = 120f;
 }

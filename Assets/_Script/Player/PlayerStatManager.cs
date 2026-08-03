@@ -57,7 +57,6 @@ public class PlayerStatManager : NetworkBehaviour
                 Evasion.Value = classData.evasion;
 
                 MaxShield.Value = classData.maxShield;
-                ShieldRegenRate.Value = classData.shieldRegenRate;
                 ShieldResetTime.Value = classData.shieldResetTime;
 
                 AttackDamage.Value = classData.attackDamage;
@@ -96,19 +95,76 @@ public class PlayerStatManager : NetworkBehaviour
 
 
         // 쉴드 재생 (마지막 피격 후 일정 시간 경과 시)
-        if (Time.time - lastDamageTime >= ShieldResetTime.Value)
+        if (CurrentShield.Value < MaxShield.Value)
         {
-            if (CurrentShield.Value < MaxShield.Value)
-                CurrentShield.Value = Mathf.Min(CurrentShield.Value + ShieldRegenRate.Value * Time.deltaTime, MaxShield.Value);
+            if (Time.time - lastDamageTime >= ShieldResetTime.Value)
+            {
+                CurrentShield.Value += 1f; // 쉴드 1회 복구
+                lastDamageTime = Time.time; // 다중 스택일 경우 다음 1스택 충전을 위해 시간 갱신
+            }
         }
     }
 
     // 데미지 입었을 때 호출 (서버 전용)
-    public void TakeDamage(float damage)
+    public void TakeDamage(float damageAmount, AttackAttribute attackType, float attackerAccuracy, float attackerPenetration)
     {
         if (!IsServer) return;
 
+        // 1. 회피 연산 (Evasion vs Accuracy)
+        // 플레이어의 회피율에서 공격자의 명중 수치를 뺍니다. (최소 0%)
+        float effectiveEvasion = Mathf.Max(0f, Evasion.Value - attackerAccuracy);
+
+        // 0 ~ 100 사이의 난수를 뽑아 실효 회피율보다 낮으면 회피(Miss) 성공
+        if (Random.Range(0f, 100f) < effectiveEvasion)
+        {
+            Debug.Log("회피 성공! (Miss) 데미지를 무효화합니다.");
+            return;
+        }
+
+        // 회피에 실패하여 피격이 확정되었으므로 쉴드 재생 대기시간을 초기화합니다.
         lastDamageTime = Time.time;
-        // 쉴드 먼저 깎고 체력 깎는 로직 추가...
+
+        // 2. 쉴드 연산 (천상의 보호막 - 1회 피해 무효화)
+        if (CurrentShield.Value >= 1f)
+        {
+            CurrentShield.Value -= 1f; // 쉴드 1 스택 차감
+            Debug.Log($"쉴드 방어 성공! 데미지가 0이 됩니다. 남은 쉴드 스택: {CurrentShield.Value}");
+            return; // 쉴드가 방어했으므로 체력 연산 생략
+        }
+
+        // 3. 방어력 및 관통 연산 (고정 감소 방식)
+        float finalDamage = damageAmount;
+
+        if (attackType == AttackAttribute.Physical)
+        {
+            // 실효 방어력 = 플레이어 물리 방어 - 공격자 물리 관통
+            float effectiveDefense = Mathf.Max(0f, Defense.Value - attackerPenetration);
+
+            // 데미지 = 기본 데미지 - 실효 방어력 (단, 최소 데미지는 1로 고정하여 완전 면역 방지)
+            finalDamage = Mathf.Max(1f, finalDamage - effectiveDefense);
+        }
+        else if (attackType == AttackAttribute.Magic)
+        {
+            // 실효 마법 저항 = 플레이어 마법 저항 - 공격자 마법 관통
+            float effectiveMagicDefense = Mathf.Max(0f, MagicDefense.Value - attackerPenetration);
+
+            finalDamage = Mathf.Max(1f, finalDamage - effectiveMagicDefense);
+        }
+
+        // 4. 최종 체력 차감
+        CurrentHealth.Value -= finalDamage;
+        Debug.Log($"플레이어 피격! 최종 받은 데미지: {finalDamage}, 남은 체력: {CurrentHealth.Value}");
+
+        // 사망 판정
+        if (CurrentHealth.Value <= 0)
+        {
+            Die();
+        }
+    }
+
+    private void Die()
+    {
+        Debug.Log("플레이어 사망!");
+        // TODO: 사망 연출, 게임 오버 처리 등
     }
 }

@@ -21,14 +21,14 @@ MonoBehaviour:
   maxShield: 50
   shieldRegenRate: 5
   shieldResetTime: 5
-  attackDamage: 20
+  attackDamage: 10
   abilityPower: 0
   cooldownReduction: 0
   critChance: 5
   critDamage: 150
   physicalPenetration: 0
   magicPenetration: 0
-  moveSpeed: 5
+  moveSpeed: 3
   luck: 1
   charisma: 1
   statusResistance: 0

@@ -7,20 +7,22 @@ public class ProjectileNetcode : NetworkBehaviour
 {
     private Vector3 moveDirection;
     private float moveSpeed;
-    private float damage;
-    private float lifeTime = 3f; // 3초 뒤 자동 소멸
 
-    // 서버에서 투사체 생성 시 호출
-    public void Initialize(Vector3 direction, float speed, float damageAmount)
+    // 1. float damage 대신 DamageInfo 구조체를 저장하도록 변경
+    private DamageInfo damageInfo;
+
+    private float lifeTime = 3f;
+
+    // 2. 세 번째 매개변수를 float에서 DamageInfo로 변경
+    public void Initialize(Vector3 direction, float speed, DamageInfo info)
     {
         moveDirection = direction.normalized;
         moveSpeed = speed;
-        damage = damageAmount;
+        damageInfo = info;
     }
 
     void Update()
     {
-        // 위치 이동은 모든 클라이언트에서 개별적으로 시각적 시뮬레이션
         transform.position += moveDirection * moveSpeed * Time.deltaTime;
 
         if (IsServer)
@@ -35,17 +37,21 @@ public class ProjectileNetcode : NetworkBehaviour
 
     private void OnTriggerEnter2D(Collider2D collision)
     {
-        if (!IsServer) return; // 피해 판정은 무조건 서버에서만
+        if (!IsServer) return;
 
         if (collision.CompareTag("Enemy"))
         {
             IDamageable target = collision.GetComponent<IDamageable>();
             if (target != null)
             {
-                target.TakeDamage(damage);
+                // 3. 넉백 방향을 투사체의 현재 진행 방향으로 덮어씌움
+                damageInfo.knockbackDir = moveDirection;
+
+                // 4. 구조체 전체를 전달
+                target.TakeDamage(damageInfo);
             }
 
-            // 관통 속성이 없다면 타격 후 즉시 파괴
+            // TODO: 추후 WeaponDataSO의 isPiercing(관통) 옵션 적용 시 분기 처리 가능
             GetComponent<NetworkObject>().Despawn();
         }
     }
