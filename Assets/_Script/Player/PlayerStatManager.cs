@@ -22,6 +22,7 @@ public class PlayerStatManager : NetworkBehaviour
     public NetworkVariable<float> ShieldRegenRate = new NetworkVariable<float>(5.0f); // 초당 재생량
     public NetworkVariable<float> ShieldResetTime = new NetworkVariable<float>(5.0f); // 피격 후 재생 대기시간
     private float lastDamageTime;
+    private float invincibilityEndTime = 0f;
 
     [Header("2. Combat Stats")]
     public NetworkVariable<float> AttackDamage = new NetworkVariable<float>(20f);
@@ -105,10 +106,21 @@ public class PlayerStatManager : NetworkBehaviour
         }
     }
 
+    public void GrantInvincibility(float duration)
+    {
+        if (!IsServer) return;
+        invincibilityEndTime = Mathf.Max(invincibilityEndTime, Time.time + duration);
+    }
+
     // 데미지 입었을 때 호출 (서버 전용)
     public void TakeDamage(float damageAmount, AttackAttribute attackType, float attackerAccuracy, float attackerPenetration)
     {
         if (!IsServer) return;
+
+        if (Time.time < invincibilityEndTime)
+        {
+            return;
+        }
 
         // 1. 회피 연산 (Evasion vs Accuracy)
         // 플레이어의 회피율에서 공격자의 명중 수치를 뺍니다. (최소 0%)
@@ -117,7 +129,6 @@ public class PlayerStatManager : NetworkBehaviour
         // 0 ~ 100 사이의 난수를 뽑아 실효 회피율보다 낮으면 회피(Miss) 성공
         if (Random.Range(0f, 100f) < effectiveEvasion)
         {
-            Debug.Log("회피 성공! (Miss) 데미지를 무효화합니다.");
             return;
         }
 
@@ -128,7 +139,6 @@ public class PlayerStatManager : NetworkBehaviour
         if (CurrentShield.Value >= 1f)
         {
             CurrentShield.Value -= 1f; // 쉴드 1 스택 차감
-            Debug.Log($"쉴드 방어 성공! 데미지가 0이 됩니다. 남은 쉴드 스택: {CurrentShield.Value}");
             return; // 쉴드가 방어했으므로 체력 연산 생략
         }
 
@@ -153,7 +163,7 @@ public class PlayerStatManager : NetworkBehaviour
 
         // 4. 최종 체력 차감
         CurrentHealth.Value -= finalDamage;
-        Debug.Log($"플레이어 피격! 최종 받은 데미지: {finalDamage}, 남은 체력: {CurrentHealth.Value}");
+        GrantInvincibility(0.2f);
 
         // 사망 판정
         if (CurrentHealth.Value <= 0)
@@ -161,6 +171,27 @@ public class PlayerStatManager : NetworkBehaviour
             Die();
         }
     }
+
+    #region Healing System (서버 전용)
+    // 1. 고정 수치 회복
+    public void HealFixed(float amount)
+    {
+        if (!IsServer || CurrentHealth.Value <= 0) return;
+
+        CurrentHealth.Value = Mathf.Min(CurrentHealth.Value + amount, MaxHealth.Value);
+        Debug.Log($"고정 회복: {amount}. 현재 체력: {CurrentHealth.Value}");
+    }
+
+    // 2. 최대 체력 비례(%) 회복
+    public void HealPercentage(float percent)
+    {
+        if (!IsServer || CurrentHealth.Value <= 0) return;
+
+        float amount = MaxHealth.Value * (percent / 100f);
+        CurrentHealth.Value = Mathf.Min(CurrentHealth.Value + amount, MaxHealth.Value);
+        Debug.Log($"비율 회복: {percent}%. 회복량: {amount}. 현재 체력: {CurrentHealth.Value}");
+    }
+    #endregion
 
     private void Die()
     {

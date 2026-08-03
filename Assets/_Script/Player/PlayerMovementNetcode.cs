@@ -184,6 +184,8 @@ public class PlayerMovementNetcode : NetworkBehaviour
 
         currentDashCount.Value--;
         serverComboTimer = comboWindow;
+
+        stats.GrantInvincibility(dashDuration);
     }
 
     private void UpdateServerDashTimers()
