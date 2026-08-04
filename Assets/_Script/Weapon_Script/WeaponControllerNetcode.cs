@@ -41,7 +41,7 @@ public class WeaponControllerNetcode : NetworkBehaviour
     private Vector3 attackTargetPos;
 
     private int currentComboIndex = 0;
-    private float lastAttackTime = 0f;
+    private float autoAttackTimer = 0f;
     private bool isAttacking = false;
     private Coroutine aoeCoroutine;
 
@@ -91,7 +91,6 @@ public class WeaponControllerNetcode : NetworkBehaviour
 
     void Update()
     {
-        // 플레이어 파괴 시 무기도 즉시 파기하여 에러 방지
         if (playerTransform == null)
         {
             Destroy(gameObject);
@@ -108,7 +107,7 @@ public class WeaponControllerNetcode : NetworkBehaviour
             Vector2 aimDir = (mousePos - playerTransform.position).normalized;
 
             RequestAimUpdateServerRpc(aimDir);
-            HandleComboInput();
+            HandleAutoAttack();
         }
 
         switch (currentState)
@@ -165,18 +164,16 @@ public class WeaponControllerNetcode : NetworkBehaviour
     private void HandleAttackMove()
     {
         transform.position = Vector3.MoveTowards(transform.position, attackTargetPos, weaponData.travelSpeed * Time.deltaTime);
-        if (Vector3.Distance(transform.position, attackTargetPos) < 0.1f)
-        {
-            currentState = WeaponState.Returning;
-        }
     }
 
     private void HandleReturnMove()
     {
-        Vector3 orbitPos = GetExpectedOrbitPosition();
-        transform.position = Vector3.MoveTowards(transform.position, orbitPos, weaponData.travelSpeed * Time.deltaTime);
-        if (Vector3.Distance(transform.position, orbitPos) < 0.1f)
+        Vector3 currentOrbitPos = GetExpectedOrbitPosition();
+        transform.position = Vector3.MoveTowards(transform.position, currentOrbitPos, weaponData.travelSpeed * Time.deltaTime);
+
+        if (Vector3.Distance(transform.position, currentOrbitPos) < 0.2f)
         {
+            transform.position = currentOrbitPos;
             currentState = WeaponState.Orbiting;
         }
     }
@@ -189,47 +186,56 @@ public class WeaponControllerNetcode : NetworkBehaviour
     }
     #endregion
 
-    #region Manual Combo System
-    private void HandleComboInput()
+    #region Auto Attack System
+    private void HandleAutoAttack()
     {
-        if (isAttacking || currentState != WeaponState.Orbiting || weaponData.actionSteps == null || weaponData.actionSteps.Length == 0) return;
+        if (isAttacking || weaponData.actionSteps == null || weaponData.actionSteps.Length == 0) return;
 
-        if (Mouse.current.leftButton.wasPressedThisFrame)
+        // 공격 중이 아니면 쿨타임 차감
+        autoAttackTimer -= Time.deltaTime;
+
+        if (autoAttackTimer <= 0f && currentState == WeaponState.Orbiting)
         {
-            if (Time.time - lastAttackTime > weaponData.comboWindow) currentComboIndex = 0;
+            StartCoroutine(AutoAttackSequence());
+        }
+    }
 
+    private IEnumerator AutoAttackSequence()
+    {
+        isAttacking = true;
+
+        for (int i = 0; i < weaponData.actionSteps.Length; i++)
+        {
+            currentComboIndex = i;
             Vector3 direction = networkAimDir.Value;
-            WeaponActionStep currentStep = weaponData.actionSteps[currentComboIndex];
+            WeaponActionStep currentStep = weaponData.actionSteps[i];
 
-            bool isMeleeAttack = (currentStep.actionTypes & (WeaponTypeFlags.Melee | WeaponTypeFlags.Slash)) != 0;
-            bool isLaser = (currentStep.actionTypes & WeaponTypeFlags.Laser) != 0;
+            bool isAoEAttack = (currentStep.actionTypes & (WeaponTypeFlags.Melee | WeaponTypeFlags.Slash | WeaponTypeFlags.Laser)) != 0;
 
-            if (isMeleeAttack)
+            if (isAoEAttack)
             {
-                Vector3 startPos = playerTransform.position + (Vector3)(direction * weaponData.orbitRadius);
-                Vector3 targetPos = playerTransform.position + (Vector3)(direction * weaponData.travelDistance);
+                float totalReach = weaponData.orbitRadius + weaponData.travelDistance;
+                Vector3 targetPos = playerTransform.position + (Vector3)(direction * totalReach);
 
-                PlayAttackVisualLocal(direction, startPos, targetPos, currentComboIndex);
+                PlayAttackVisualLocal(direction, targetPos, currentComboIndex);
             }
-            else if (isLaser)
+            else
             {
                 if (aoeCoroutine != null) StopCoroutine(aoeCoroutine);
                 aoeCoroutine = StartCoroutine(ShowAoEVisual(direction, currentStep));
             }
 
             RequestComboAttackServerRpc(currentComboIndex, direction);
-
-            StartCoroutine(AttackCooldownRoutine(currentStep.stepDelay));
-            currentComboIndex++;
-            if (currentComboIndex >= weaponData.actionSteps.Length) currentComboIndex = 0;
-            lastAttackTime = Time.time;
+            yield return new WaitForSeconds(currentStep.stepDelay);
         }
+        currentState = WeaponState.Returning;
+
+        autoAttackTimer = weaponData.comboWindow;
+        isAttacking = false;
     }
 
-    private void PlayAttackVisualLocal(Vector3 direction, Vector3 startPos, Vector3 targetPos, int comboIdx)
+    private void PlayAttackVisualLocal(Vector3 direction, Vector3 targetPos, int comboIdx)
     {
-        transform.position = startPos;
-
         attackTargetPos = targetPos;
         currentState = WeaponState.Attacking;
 
@@ -241,19 +247,15 @@ public class WeaponControllerNetcode : NetworkBehaviour
         if (weaponSprite != null) weaponSprite.flipY = (direction.x < 0);
     }
 
-    private IEnumerator AttackCooldownRoutine(float delay)
-    {
-        isAttacking = true;
-        yield return new WaitForSeconds(delay);
-        isAttacking = false;
-    }
-
     [ServerRpc]
     private void RequestComboAttackServerRpc(int comboIndex, Vector3 direction)
     {
         if (comboIndex < 0 || comboIndex >= weaponData.actionSteps.Length) return;
         WeaponActionStep step = weaponData.actionSteps[comboIndex];
-        ExecuteStepActionServer(step, direction);
+        float totalReach = weaponData.orbitRadius + weaponData.travelDistance;
+        Vector3 logicalAttackOrigin = playerTransform.position + (direction * totalReach);
+
+        ExecuteStepActionServer(step, direction, logicalAttackOrigin);
     }
     #endregion
 
@@ -287,18 +289,16 @@ public class WeaponControllerNetcode : NetworkBehaviour
         };
     }
 
-    private void ExecuteStepActionServer(WeaponActionStep step, Vector3 direction)
+    private void ExecuteStepActionServer(WeaponActionStep step, Vector3 direction, Vector3 attackOrigin)
     {
         float finalDamage = CalculateFinalDamage();
-        Vector3 attackOrigin = playerTransform.position;
 
         if ((step.actionTypes & WeaponTypeFlags.Melee) != 0 || (step.actionTypes & WeaponTypeFlags.Slash) != 0)
         {
-            // 플레이어 중심에서 attackRange 만큼 데미지 판정
             int hitCount = Physics2D.OverlapCircle(attackOrigin, step.attackRange, enemyFilter, hitBuffer);
             for (int i = 0; i < hitCount; i++)
             {
-                // 플레이어 기준 적 방향 계산
+                // 적 방향 계산 타격 목표 지점 기준
                 Vector3 dirToEnemy = (hitBuffer[i].transform.position - attackOrigin).normalized;
 
                 if ((step.actionTypes & WeaponTypeFlags.Slash) != 0)
@@ -318,12 +318,10 @@ public class WeaponControllerNetcode : NetworkBehaviour
             if (step.projectileBehavior == ProjectileBehavior.Homing)
             {
                 Transform bestTarget = FindBestTarget();
-                if (bestTarget != null) projDir = (bestTarget.position - attackOrigin).normalized;
+                if (bestTarget != null) projDir = (bestTarget.position - transform.position).normalized;
             }
 
-            Vector3 spawnOrigin = playerTransform.position + (Vector3)(direction * weaponData.orbitRadius);
-            GameObject projObj = Instantiate(step.projectilePrefab, spawnOrigin, Quaternion.identity);
-
+            GameObject projObj = Instantiate(step.projectilePrefab, transform.position, Quaternion.identity);
             ProjectileNetcode proj = projObj.GetComponent<ProjectileNetcode>();
             DamageInfo projInfo = CreateBaseDamageInfo(finalDamage, projDir, step.knockbackForce);
             proj.Initialize(projDir, step.projectileSpeed, projInfo);
@@ -365,7 +363,7 @@ public class WeaponControllerNetcode : NetworkBehaviour
         MeshRenderer meshRenderer = aoeIndicator.GetComponent<MeshRenderer>();
 
         aoeIndicator.ClearMesh();
-        aoeIndicator.transform.position = transform.position;
+        aoeIndicator.transform.position = attackTargetPos;
 
         if ((step.actionTypes & WeaponTypeFlags.Laser) != 0)
         {
@@ -378,14 +376,17 @@ public class WeaponControllerNetcode : NetworkBehaviour
             aoeIndicator.DrawShape(step.attackRange, drawAngle, 24);
         }
 
+        // 방향 설정 (부채꼴의 경우 진행 방향)
         float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
         aoeIndicator.transform.rotation = Quaternion.Euler(0, 0, angle);
 
+        // 표시
         aoeIndicator.gameObject.SetActive(true);
         if (meshRenderer != null) meshRenderer.enabled = true;
 
         yield return new WaitForSeconds(0.15f);
 
+        // 숨기기
         if (meshRenderer != null) meshRenderer.enabled = false;
         aoeIndicator.gameObject.SetActive(false);
         aoeIndicator.ClearMesh();
