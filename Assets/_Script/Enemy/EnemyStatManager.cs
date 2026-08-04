@@ -26,6 +26,7 @@ public class EnemyStatManager : NetworkBehaviour, IDamageable
 
     private Rigidbody2D rb;
     public bool isStunned = false;
+    private bool isDead = false;
 
     void Awake()
     {
@@ -100,9 +101,19 @@ public class EnemyStatManager : NetworkBehaviour, IDamageable
         isStunned = false;
     }
 
-    private void Die()
+    public void Die()
     {
-        NetworkObject.Despawn(false);
-        EnemyPoolManager.Instance.ReturnEnemy(this.gameObject);
+        if (isDead) return;
+        isDead = true;
+
+        NetworkObject netObj = GetComponent<NetworkObject>();
+        if (netObj != null && netObj.IsSpawned)
+        {
+            netObj.Despawn(true);
+        }
+        else
+        {
+            Destroy(gameObject);
+        }
     }
 }

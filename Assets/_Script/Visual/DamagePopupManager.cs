@@ -44,7 +44,14 @@ public class DamagePopupManager : MonoBehaviour
     // 사용이 끝난 팝업을 풀로 반환
     public void ReturnPopup(GameObject popup)
     {
+        if (popup == null) return;
+        if (!popup.activeSelf) return;
+
         popup.SetActive(false);
-        popupPool.Enqueue(popup);
+
+        if (!popupPool.Contains(popup))
+        {
+            popupPool.Enqueue(popup);
+        }
     }
 }

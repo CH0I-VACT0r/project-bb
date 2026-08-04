@@ -7,7 +7,8 @@ public enum WeaponTypeFlags
     Melee = 1 << 0,      // 근접
     Ranged = 1 << 1,     // 투사체 발사
     Slash = 1 << 2,      // 부채꼴 슬래쉬
-    Laser = 1 << 3       // 레이저
+    Laser = 1 << 3,      // 레이저
+    Single = 1 << 4,     // 단일
 }
 
 public enum AttackAttribute { Physical, Magic }
@@ -29,7 +30,13 @@ public struct WeaponActionStep
     public float projectileSpeed;
     public ProjectileBehavior projectileBehavior;
 
-    // 신규 추가: 해당 타격의 넉백 파워
+    [Header("Projectile Advanced Settings")]
+    public float projectileRange; // 투사체 사정거리 (예: 10f)
+    public int projectileCount;   // 분사 개수 (기본값 1)
+    public float spreadAngle;     // 분사 각도 (예: 120f)
+    public int burstCount;        // 연사 개수 (기본값 1)
+    public float burstInterval;
+
     [Header("Impact Settings")]
     public float knockbackForce;
 }

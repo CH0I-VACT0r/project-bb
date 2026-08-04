@@ -70,8 +70,7 @@ public class WeaponControllerNetcode : NetworkBehaviour
 
         if (aoeIndicator != null)
         {
-            aoeIndicator.transform.SetParent(this.transform);
-            aoeIndicator.transform.localPosition = Vector3.zero;
+            aoeIndicator.transform.SetParent(null);
         }
     }
 
@@ -93,6 +92,7 @@ public class WeaponControllerNetcode : NetworkBehaviour
     {
         if (playerTransform == null)
         {
+            if (aoeIndicator != null) Destroy(aoeIndicator.gameObject);
             Destroy(gameObject);
             return;
         }
@@ -210,7 +210,7 @@ public class WeaponControllerNetcode : NetworkBehaviour
             Vector3 direction = networkAimDir.Value;
             WeaponActionStep currentStep = weaponData.actionSteps[i];
 
-            bool isAoEAttack = (currentStep.actionTypes & (WeaponTypeFlags.Melee | WeaponTypeFlags.Slash | WeaponTypeFlags.Laser)) != 0;
+            bool isAoEAttack = (currentStep.actionTypes & (WeaponTypeFlags.Melee | WeaponTypeFlags.Slash | WeaponTypeFlags.Laser | WeaponTypeFlags.Single)) != 0;
 
             if (isAoEAttack)
             {
@@ -221,6 +221,7 @@ public class WeaponControllerNetcode : NetworkBehaviour
             }
             else
             {
+                attackTargetPos = transform.position;
                 if (aoeCoroutine != null) StopCoroutine(aoeCoroutine);
                 aoeCoroutine = StartCoroutine(ShowAoEVisual(direction, currentStep));
             }
@@ -229,7 +230,6 @@ public class WeaponControllerNetcode : NetworkBehaviour
             yield return new WaitForSeconds(currentStep.stepDelay);
         }
         currentState = WeaponState.Returning;
-
         autoAttackTimer = weaponData.comboWindow;
         isAttacking = false;
     }
@@ -292,40 +292,136 @@ public class WeaponControllerNetcode : NetworkBehaviour
     private void ExecuteStepActionServer(WeaponActionStep step, Vector3 direction, Vector3 attackOrigin)
     {
         float finalDamage = CalculateFinalDamage();
+        bool isSingle = (step.actionTypes & WeaponTypeFlags.Single) != 0;
+        bool isMelee = (step.actionTypes & WeaponTypeFlags.Melee) != 0;
+        bool isSlash = (step.actionTypes & WeaponTypeFlags.Slash) != 0;
 
-        if ((step.actionTypes & WeaponTypeFlags.Melee) != 0 || (step.actionTypes & WeaponTypeFlags.Slash) != 0)
+        // 1. 직접 타격 계열 (Single, Melee, Slash) 연산
+        if (isSingle || isMelee || isSlash)
         {
             int hitCount = Physics2D.OverlapCircle(attackOrigin, step.attackRange, enemyFilter, hitBuffer);
-            for (int i = 0; i < hitCount; i++)
+            if (isSingle && hitCount > 0)
             {
-                // 적 방향 계산 타격 목표 지점 기준
-                Vector3 dirToEnemy = (hitBuffer[i].transform.position - attackOrigin).normalized;
+                float closestDist = float.MaxValue;
+                Collider2D closestEnemy = null;
 
-                if ((step.actionTypes & WeaponTypeFlags.Slash) != 0)
+                for (int i = 0; i < hitCount; i++)
                 {
-                    float angleToEnemy = Vector2.Angle(direction, dirToEnemy);
-                    if (angleToEnemy > step.slashAngle / 2f) continue;
+                    float dist = Vector2.Distance(attackOrigin, hitBuffer[i].transform.position);
+                    if (dist < closestDist)
+                    {
+                        closestDist = dist;
+                        closestEnemy = hitBuffer[i];
+                    }
                 }
 
-                DamageInfo info = CreateBaseDamageInfo(finalDamage, dirToEnemy, step.knockbackForce);
-                hitBuffer[i].GetComponent<IDamageable>()?.TakeDamage(info);
+                if (closestEnemy != null)
+                {
+                    Vector3 dirToEnemy = (closestEnemy.transform.position - attackOrigin).normalized;
+                    DamageInfo info = CreateBaseDamageInfo(finalDamage, dirToEnemy, step.knockbackForce);
+                    closestEnemy.GetComponent<IDamageable>()?.TakeDamage(info);
+                }
+            }
+            // 기존 다수 타격(Melee, Slash) 처리
+            else if (!isSingle)
+            {
+                for (int i = 0; i < hitCount; i++)
+                {
+                    Vector3 dirToEnemy = (hitBuffer[i].transform.position - attackOrigin).normalized;
+
+                    if (isSlash)
+                    {
+                        float angleToEnemy = Vector2.Angle(direction, dirToEnemy);
+                        if (angleToEnemy > step.slashAngle / 2f) continue;
+                    }
+
+                    DamageInfo info = CreateBaseDamageInfo(finalDamage, dirToEnemy, step.knockbackForce);
+                    hitBuffer[i].GetComponent<IDamageable>()?.TakeDamage(info);
+                }
             }
         }
 
+        // 2. 투사체 연산 (Ranged) - 기존 로직 유지
         if ((step.actionTypes & WeaponTypeFlags.Ranged) != 0 && step.projectilePrefab != null)
         {
-            Vector3 projDir = direction;
+            StartCoroutine(SpawnProjectilesRoutine(step, direction, attackOrigin, finalDamage));
+        }
+    }
+
+    private IEnumerator SpawnProjectilesRoutine(WeaponActionStep step, Vector3 direction, Vector3 origin, float finalDamage)
+    {
+        // 안전장치: 0 이하의 값이 들어오면 1로 보정
+        int bCount = Mathf.Max(1, step.burstCount);
+        int pCount = Mathf.Max(1, step.projectileCount);
+        float pRange = step.projectileRange > 0f ? step.projectileRange : 15f;
+
+        // 사정거리를 생존 시간으로 변환
+        float lifeTime = pRange / step.projectileSpeed;
+
+        for (int b = 0; b < bCount; b++)
+        {
+            // 타겟팅 유도(Homing) 기능이 켜져있다면, 기본 발사 방향(direction)을 타겟 방향으로 덮어씀
+            Vector3 baseDir = direction;
             if (step.projectileBehavior == ProjectileBehavior.Homing)
             {
                 Transform bestTarget = FindBestTarget();
-                if (bestTarget != null) projDir = (bestTarget.position - transform.position).normalized;
+                if (bestTarget != null) baseDir = (bestTarget.position - transform.position).normalized;
             }
 
-            GameObject projObj = Instantiate(step.projectilePrefab, transform.position, Quaternion.identity);
-            ProjectileNetcode proj = projObj.GetComponent<ProjectileNetcode>();
-            DamageInfo projInfo = CreateBaseDamageInfo(finalDamage, projDir, step.knockbackForce);
-            proj.Initialize(projDir, step.projectileSpeed, projInfo);
-            projObj.GetComponent<NetworkObject>().Spawn();
+            // 분사 각도(Spread) 세팅
+            // 개수가 1개면 0도, 여러 개면 시작 각도(-60)부터 일정 간격(60)으로 배치
+            float startAngle = 0f;
+            float angleStep = 0f;
+
+            if (pCount > 1)
+            {
+                if (step.spreadAngle >= 360f)
+                {
+                    startAngle = 0f;
+                    angleStep = 360f / pCount;
+                }
+                else
+                {
+                    startAngle = -step.spreadAngle / 2f;
+                    angleStep = step.spreadAngle / (pCount - 1);
+                }
+            }
+
+            for (int p = 0; p < pCount; p++)
+            {
+                float currentAngleOffset = startAngle + (angleStep * p);
+                Vector3 finalProjDir = Quaternion.Euler(0, 0, currentAngleOffset) * baseDir;
+
+                float rotAngle = Mathf.Atan2(finalProjDir.y, finalProjDir.x) * Mathf.Rad2Deg;
+                Quaternion projRotation = Quaternion.Euler(0, 0, rotAngle);
+
+                GameObject projObj = Instantiate(step.projectilePrefab, origin, Quaternion.identity);
+
+                ProjectileNetcode proj = projObj.GetComponent<ProjectileNetcode>();
+                DamageInfo projInfo = CreateBaseDamageInfo(finalDamage, finalProjDir, step.knockbackForce);
+
+                proj.Initialize(finalProjDir, step.projectileSpeed, projInfo);
+
+                NetworkObject netObj = projObj.GetComponent<NetworkObject>();
+                netObj.Spawn();
+
+                StartCoroutine(DespawnProjectileAfterTime(netObj, lifeTime));
+            }
+
+            // 연사 횟수가 더 남았다면 다음 발사까지 대기
+            if (b < bCount - 1)
+            {
+                yield return new WaitForSeconds(step.burstInterval);
+            }
+        }
+    }
+
+    private IEnumerator DespawnProjectileAfterTime(NetworkObject netObj, float lifeTime)
+    {
+        yield return new WaitForSeconds(lifeTime);
+        if (netObj != null && netObj.IsSpawned)
+        {
+            netObj.Despawn(true);
         }
     }
 
