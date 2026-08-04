@@ -204,11 +204,12 @@ public class WeaponControllerNetcode : NetworkBehaviour
             bool isMeleeAttack = (currentStep.actionTypes & (WeaponTypeFlags.Melee | WeaponTypeFlags.Slash)) != 0;
             bool isLaser = (currentStep.actionTypes & WeaponTypeFlags.Laser) != 0;
 
-            // NGO 에러 방지: 시각 효과는 서버를 거치지 않고 내 화면에서 즉시 렌더링되도록 수정
             if (isMeleeAttack)
             {
-                Vector3 targetPos = transform.position + (Vector3)(direction * weaponData.travelDistance);
-                PlayAttackVisualLocal(direction, targetPos, currentComboIndex);
+                Vector3 startPos = playerTransform.position + (Vector3)(direction * weaponData.orbitRadius);
+                Vector3 targetPos = playerTransform.position + (Vector3)(direction * weaponData.travelDistance);
+
+                PlayAttackVisualLocal(direction, startPos, targetPos, currentComboIndex);
             }
             else if (isLaser)
             {
@@ -216,7 +217,6 @@ public class WeaponControllerNetcode : NetworkBehaviour
                 aoeCoroutine = StartCoroutine(ShowAoEVisual(direction, currentStep));
             }
 
-            // 서버에는 시각 효과를 뺀 순수 '데미지 연산'만 요청
             RequestComboAttackServerRpc(currentComboIndex, direction);
 
             StartCoroutine(AttackCooldownRoutine(currentStep.stepDelay));
@@ -226,8 +226,10 @@ public class WeaponControllerNetcode : NetworkBehaviour
         }
     }
 
-    private void PlayAttackVisualLocal(Vector3 direction, Vector3 targetPos, int comboIdx)
+    private void PlayAttackVisualLocal(Vector3 direction, Vector3 startPos, Vector3 targetPos, int comboIdx)
     {
+        transform.position = startPos;
+
         attackTargetPos = targetPos;
         currentState = WeaponState.Attacking;
 
@@ -288,13 +290,16 @@ public class WeaponControllerNetcode : NetworkBehaviour
     private void ExecuteStepActionServer(WeaponActionStep step, Vector3 direction)
     {
         float finalDamage = CalculateFinalDamage();
+        Vector3 attackOrigin = playerTransform.position;
 
         if ((step.actionTypes & WeaponTypeFlags.Melee) != 0 || (step.actionTypes & WeaponTypeFlags.Slash) != 0)
         {
-            int hitCount = Physics2D.OverlapCircle(transform.position, step.attackRange, enemyFilter, hitBuffer);
+            // 플레이어 중심에서 attackRange 만큼 데미지 판정
+            int hitCount = Physics2D.OverlapCircle(attackOrigin, step.attackRange, enemyFilter, hitBuffer);
             for (int i = 0; i < hitCount; i++)
             {
-                Vector3 dirToEnemy = (hitBuffer[i].transform.position - transform.position).normalized;
+                // 플레이어 기준 적 방향 계산
+                Vector3 dirToEnemy = (hitBuffer[i].transform.position - attackOrigin).normalized;
 
                 if ((step.actionTypes & WeaponTypeFlags.Slash) != 0)
                 {
@@ -313,10 +318,12 @@ public class WeaponControllerNetcode : NetworkBehaviour
             if (step.projectileBehavior == ProjectileBehavior.Homing)
             {
                 Transform bestTarget = FindBestTarget();
-                if (bestTarget != null) projDir = (bestTarget.position - transform.position).normalized;
+                if (bestTarget != null) projDir = (bestTarget.position - attackOrigin).normalized;
             }
 
-            GameObject projObj = Instantiate(step.projectilePrefab, transform.position, Quaternion.identity);
+            Vector3 spawnOrigin = playerTransform.position + (Vector3)(direction * weaponData.orbitRadius);
+            GameObject projObj = Instantiate(step.projectilePrefab, spawnOrigin, Quaternion.identity);
+
             ProjectileNetcode proj = projObj.GetComponent<ProjectileNetcode>();
             DamageInfo projInfo = CreateBaseDamageInfo(finalDamage, projDir, step.knockbackForce);
             proj.Initialize(projDir, step.projectileSpeed, projInfo);
