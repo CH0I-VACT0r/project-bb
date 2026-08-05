@@ -37,6 +37,13 @@ public struct WeaponActionStep
     public int burstCount;        // 연사 개수 (기본값 1)
     public float burstInterval;
 
+    [Header("On-Hit Status Effects")]
+    public ElementFlags elements;               // 콤보 타격 시 부여할 속성들 (복수 선택 가능)
+    public float elementBuildUpAmount;          // 타격당 축적치 (예: 25)
+    public float elementDamageMultiplier;       // 시전자 공격력의 몇 %를 도트 피해로 줄 것인가 (예: 0.2f = 20%)
+
+    public StatusEffectFlags statusEffects;
+
     [Header("Impact Settings")]
     public float knockbackForce;
 }

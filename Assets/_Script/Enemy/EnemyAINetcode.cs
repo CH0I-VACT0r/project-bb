@@ -20,9 +20,12 @@ public class EnemyAINetcode : NetworkBehaviour
     private ContactFilter2D separationFilter;
     private static Collider2D[] separationBuffer = new Collider2D[15];
 
+    private StatusEffectManagerNetcode statusManager;
+
     private void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
+        statusManager = GetComponent<StatusEffectManagerNetcode>();
 
         separationFilter.useLayerMask = true;
         separationFilter.layerMask = enemyLayer;
@@ -45,18 +48,47 @@ public class EnemyAINetcode : NetworkBehaviour
     {
         if (!IsServer) return;
 
-        if (targetPlayer != null)
+        if (statusManager != null && statusManager.isStunned.Value)
         {
-            // 1. 플레이어를 향한 목표 방향 벡터
-            Vector2 directionToTarget = (targetPlayer.position - transform.position).normalized;
+            rb.linearVelocity = Vector2.zero;
+            return;
+        }
 
-            // 2. 주변 적들을 밀어내는 척력 벡터 계산
+        Vector2 targetPos = transform.position;
+        bool hasValidTarget = false;
+
+        if (statusManager != null && (statusManager.isTaunted.Value || statusManager.isFeared.Value) && statusManager.effectSourceId.Value != 0)
+        {
+            // NetworkManager를 통해 시전자의 실제 Transform을 찾아냄
+            if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(statusManager.effectSourceId.Value, out NetworkObject sourceObj))
+            {
+                if (statusManager.isTaunted.Value)
+                {
+                    targetPos = sourceObj.transform.position; // 시전자 쪽으로 향함
+                }
+                else if (statusManager.isFeared.Value)
+                {
+                    // 시전자 반대편으로 도망치는 좌표 계산
+                    Vector2 runDir = ((Vector2)transform.position - (Vector2)sourceObj.transform.position).normalized;
+                    targetPos = (Vector2)transform.position + runDir;
+                }
+                hasValidTarget = true;
+            }
+        }
+        else if (targetPlayer != null)
+        {
+            targetPos = targetPlayer.position;
+            hasValidTarget = true;
+        }
+
+        if (hasValidTarget)
+        {
+            Vector2 directionToTarget = ((Vector2)targetPos - (Vector2)transform.position).normalized;
             Vector2 separationVector = CalculateSeparationVector();
-
-            // 3. 두 벡터를 합성하고 정규화하여 최종 이동 벡터 산출
             Vector2 finalDirection = (directionToTarget + (separationVector * separationWeight)).normalized;
 
-            rb.linearVelocity = finalDirection * moveSpeed;
+            float currentSpeed = moveSpeed * (statusManager != null ? statusManager.moveSpeedMultiplier.Value : 1f);
+            rb.linearVelocity = finalDirection * currentSpeed;
         }
         else
         {

@@ -10,6 +10,7 @@ public class PlayerMovementNetcode : NetworkBehaviour
 {
     private Rigidbody2D rb;
     private PlayerStatManager stats;
+    private StatusEffectManagerNetcode statusManager;
 
     private Vector2 movement;
     private bool isDashing = false;
@@ -38,6 +39,7 @@ public class PlayerMovementNetcode : NetworkBehaviour
     {
         rb = GetComponent<Rigidbody2D>();
         stats = GetComponent<PlayerStatManager>();
+        statusManager = GetComponent<StatusEffectManagerNetcode>();
 
         if (dashTimerUI != null) dashTimerUI.enabled = false;
         if (dashTimerBG != null) dashTimerBG.enabled = false;
@@ -82,6 +84,12 @@ public class PlayerMovementNetcode : NetworkBehaviour
         UpdateLocalDashUI();
         if (isDashing) return;
 
+        if (statusManager != null && (statusManager.isStunned.Value || statusManager.isTaunted.Value || statusManager.isFeared.Value))
+        {
+            movement = Vector2.zero;
+            return;
+        }
+
         movement = InputManager.Instance.Controls.Gameplay.Move.ReadValue<Vector2>().normalized;
     }
 
@@ -89,11 +97,37 @@ public class PlayerMovementNetcode : NetworkBehaviour
     {
         if (!IsOwner) return;
         if (isDashing) return;
-        rb.linearVelocity = movement.normalized * stats.MoveSpeed.Value;
+
+        if (statusManager != null && statusManager.isStunned.Value)
+        {
+            rb.linearVelocity = Vector2.zero;
+            return;
+        }
+
+        Vector2 finalMoveDir = movement.normalized;
+
+        if (statusManager != null && (statusManager.isTaunted.Value || statusManager.isFeared.Value) && statusManager.effectSourceId.Value != 0)
+        {
+            if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(statusManager.effectSourceId.Value, out NetworkObject sourceObj))
+            {
+                if (statusManager.isTaunted.Value)
+                {
+                    finalMoveDir = ((Vector2)sourceObj.transform.position - (Vector2)transform.position).normalized;
+                }
+                else if (statusManager.isFeared.Value)
+                {
+                    finalMoveDir = ((Vector2)transform.position - (Vector2)sourceObj.transform.position).normalized;
+                }
+            }
+        }
+
+        float currentSpeed = stats.MoveSpeed.Value * (statusManager != null ? statusManager.moveSpeedMultiplier.Value : 1f);
+        rb.linearVelocity = finalMoveDir * currentSpeed;
     }
 
     private void OnDashPerformed(InputAction.CallbackContext context)
     {
+        if (statusManager != null && (statusManager.isStunned.Value || statusManager.isTaunted.Value || statusManager.isFeared.Value)) return;
         if (isDashing) return;
 
         if (localDashCount > 0 && !isLocalCooldown)
