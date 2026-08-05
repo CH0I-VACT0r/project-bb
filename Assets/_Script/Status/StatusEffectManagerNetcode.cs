@@ -14,22 +14,32 @@ public class StatusEffectManagerNetcode : NetworkBehaviour
     public float maxShock = 100f;
     private float curFire, curPoison, curBleed, curFrost, curShock;
 
-    [Header("Effect Modifiers (확장성: 아이템/버프 획득 시 이 값들을 증가시킴)")]
+    [Header("Offensive Modifiers (공격 스탯: 정수 1당 1% 증가)")]
     public float bonusFireDamage = 0f;       // 화염 피해 증가치 (0.2 = 20% 증가)
     public float bonusPoisonDamage = 0f;
     public float bonusBleedDamage = 0f;
     public float bonusSlowEffect = 0f;       // 슬로우 추가 둔화량 (0.1 = 10% 더 느려짐)
     public float bonusVulnerableEffect = 0f;
-    
+
+    [Header("Duration Modifiers (시간 스탯: 1.0당 1초 연장)")]
     public float bonusStunDuration = 0f;
     public float bonusSlowDuration = 0f;
     public float bonusTauntDuration = 0f;
     public float bonusFearDuration = 0f;
     public float bonusVulnerableDuration = 0f;
-
     public float bonusFireDuration = 0f;
     public float bonusPoisonDuration = 0f;
     public float bleedDecayReduction = 0f;
+
+    [Header("Defensive Stats (방어 스탯: 무한 성장 가능, 점감 공식 적용)")]
+    public int ccResistanceStat = 0;         // 예: 100 입력 시 -> 50% 저항, 300 입력 시 -> 75% 저항
+    public int dotDamageResistanceStat = 0;
+    public int elementalResistanceStat = 0;
+
+    private const float DEFENSE_CAP_CONSTANT = 300f;
+    public float CCResistancePct => ccResistanceStat / (ccResistanceStat + DEFENSE_CAP_CONSTANT);
+    public float DotDamageResistancePct => dotDamageResistanceStat / (dotDamageResistanceStat + DEFENSE_CAP_CONSTANT);
+    public float ElementalResistancePct => elementalResistanceStat / (elementalResistanceStat + DEFENSE_CAP_CONSTANT);
 
     [Header("Network Synced States")]
     public NetworkVariable<float> damageTakenMultiplier = new NetworkVariable<float>(1.0f);
@@ -63,6 +73,9 @@ public class StatusEffectManagerNetcode : NetworkBehaviour
 
     private void HandleElementBuildup(ElementFlags types, float amount, float baseDotDamage)
     {
+        float finalAmount = amount * (1f - ElementalResistancePct);
+        if (finalAmount <= 0f) return;
+
         if ((types & ElementFlags.Fire) != 0)
         {
             curFire += amount;
@@ -112,7 +125,7 @@ public class StatusEffectManagerNetcode : NetworkBehaviour
         for (int i = 0; i < totalTicks; i++)
         {
             yield return new WaitForSeconds(1f);
-            float finalDmg = baseDmg * (1f + bonusFireDamage);
+            float finalDmg = baseDmg * (1f + (bonusFireDamage / 100f));
             ApplyDoTDamage(finalDmg, ElementFlags.Fire);
         }
         curFire = 0f;
@@ -125,7 +138,7 @@ public class StatusEffectManagerNetcode : NetworkBehaviour
         for (int i = 0; i < totalTicks; i++)
         {
             yield return new WaitForSeconds(1f);
-            float finalDmg = baseDmg * (1f + bonusPoisonDamage);
+            float finalDmg = baseDmg * (1f + (bonusPoisonDamage / 100f));
             ApplyDoTDamage(finalDmg, ElementFlags.Poison);
         }
         curPoison = 0f;
@@ -137,20 +150,12 @@ public class StatusEffectManagerNetcode : NetworkBehaviour
         {
             yield return new WaitForSeconds(1f);
 
-            // 데미지 산출 (기존 동일)
-            float bleedDmg = (baseDmg + (curBleed * 0.1f)) * (1f + bonusBleedDamage);
+            float bleedDmg = (baseDmg + (curBleed * 0.1f)) * (1f + (bonusBleedDamage / 100f));
             ApplyDoTDamage(bleedDmg, ElementFlags.Bleed);
-
-            // 비율 기반 스택 붕괴 연산
-            // 기본 20%(0.2f) 감소에서 bleedDecayReduction을 뺀 최종 감소율 계산
-            // 감소율이 0% 이하가 되는 것을 막기 위해 최소 1%(0.01f) 하한선 적용
-            float finalDecayRate = Mathf.Max(0.01f, 0.20f - bleedDecayReduction);
-
-            // 현재 스택의 퍼센트만큼 차감
+            float finalDecayRate = Mathf.Max(0.01f, 0.20f - (bleedDecayReduction / 100f));
             float decayAmount = curBleed * finalDecayRate;
             curBleed -= decayAmount;
 
-            // 무한 루프 방지용
             if (curBleed < 1f)
             {
                 curBleed = 0f;
@@ -160,7 +165,8 @@ public class StatusEffectManagerNetcode : NetworkBehaviour
 
     private void ApplyDoTDamage(float dmg, ElementFlags element)
     {
-        DamageInfo dotInfo = new DamageInfo { damageAmount = dmg, elementTypes = element };
+        float resistedDmg = dmg * (1f - DotDamageResistancePct);
+        DamageInfo dotInfo = new DamageInfo { damageAmount = resistedDmg, elementTypes = element };
         if (statManager != null) statManager.TakeDamage(dotInfo);
     }
     #endregion
@@ -169,7 +175,7 @@ public class StatusEffectManagerNetcode : NetworkBehaviour
     private void TriggerFireExplosion(float baseDmg)
     {
         curFire = 0f; // 스택 초기화
-        float explosionDmg = baseDmg * 3f * (1f + bonusFireDamage); // 폭발은 틱뎀의 3배
+        float explosionDmg = baseDmg * 3f * (1f + (bonusFireDamage / 100f));
 
         DamageInfo explosionInfo = new DamageInfo
         {
@@ -177,10 +183,7 @@ public class StatusEffectManagerNetcode : NetworkBehaviour
             elementTypes = ElementFlags.Fire
         };
 
-        if (statManager != null)
-        {
-            statManager.TakeDamage(explosionInfo);
-        }
+        if (statManager != null) statManager.TakeDamage(explosionInfo);
     }
 
     private void TriggerFrostStun()
@@ -211,9 +214,15 @@ public class StatusEffectManagerNetcode : NetworkBehaviour
         }
     }
 
+    private float GetResistedDuration(float baseDuration, float bonusDuration)
+    {
+        float duration = (baseDuration + bonusDuration) * (1f - CCResistancePct);
+        return Mathf.Max(0.1f, duration);
+    }
+
     private IEnumerator StunRoutine(float baseDuration)
     {
-        float finalDuration = Mathf.Max(0.1f, baseDuration + bonusStunDuration);
+        float finalDuration = GetResistedDuration(baseDuration, bonusStunDuration);
         isStunned.Value = true;
         yield return new WaitForSeconds(finalDuration);
         isStunned.Value = false;
@@ -221,7 +230,7 @@ public class StatusEffectManagerNetcode : NetworkBehaviour
 
     private IEnumerator TauntRoutine(float baseDuration)
     {
-        float finalDuration = Mathf.Max(0.1f, baseDuration + bonusTauntDuration);
+        float finalDuration = GetResistedDuration(baseDuration, bonusTauntDuration);
         isTaunted.Value = true;
         yield return new WaitForSeconds(finalDuration);
         isTaunted.Value = false;
@@ -230,37 +239,37 @@ public class StatusEffectManagerNetcode : NetworkBehaviour
 
     private IEnumerator FearRoutine(float baseDuration)
     {
-        float finalDuration = Mathf.Max(0.1f, baseDuration + bonusFearDuration);
+        float finalDuration = GetResistedDuration(baseDuration, bonusFearDuration);
         isFeared.Value = true;
         yield return new WaitForSeconds(finalDuration);
         isFeared.Value = false;
         effectSourceId.Value = 0;
     }
 
-    private void ApplySlow(float baseSlowPercentage, float duration)
+    private void ApplySlow(float baseSlowPercentage, float baseDuration)
     {
-        StartCoroutine(SlowRoutine(baseSlowPercentage, duration));
+        StartCoroutine(SlowRoutine(baseSlowPercentage, baseDuration));
     }
 
     private IEnumerator SlowRoutine(float baseSlowPercentage, float baseDuration)
     {
-        float finalDuration = Mathf.Max(0.1f, baseDuration + bonusSlowDuration);
-        float totalSlow = baseSlowPercentage + bonusSlowEffect;
+        float finalDuration = GetResistedDuration(baseDuration, bonusSlowDuration);
+        float totalSlow = baseSlowPercentage + (bonusSlowEffect / 100f);
         moveSpeedMultiplier.Value = Mathf.Clamp(1.0f - totalSlow, 0.1f, 1.0f);
 
         yield return new WaitForSeconds(finalDuration);
         moveSpeedMultiplier.Value = 1.0f;
     }
 
-    private void SetVulnerable(bool isVulnerable, float duration)
+    private void SetVulnerable(bool isVulnerable, float baseDuration)
     {
-        StartCoroutine(VulnerableRoutine(duration));
+        StartCoroutine(VulnerableRoutine(baseDuration));
     }
 
     private IEnumerator VulnerableRoutine(float baseDuration)
     {
-        float finalDuration = Mathf.Max(0.1f, baseDuration + bonusVulnerableDuration);
-        damageTakenMultiplier.Value = 1.0f + 0.25f + bonusVulnerableEffect;
+        float finalDuration = GetResistedDuration(baseDuration, bonusVulnerableDuration);
+        damageTakenMultiplier.Value = 1.0f + 0.25f + (bonusVulnerableEffect / 100f);
 
         yield return new WaitForSeconds(finalDuration);
         damageTakenMultiplier.Value = 1.0f;
