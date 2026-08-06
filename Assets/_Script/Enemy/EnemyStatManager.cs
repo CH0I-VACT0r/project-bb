@@ -6,28 +6,21 @@ public enum EnemyAttackType { ConeSlash, Dash, Projectile }
 
 public class EnemyStatManager : NetworkBehaviour, IDamageable
 {
-    [Header("Enemy Stats")]
-    public float maxHP = 50f;
+    public EnemyDataSO enemyData;
     public NetworkVariable<float> currentHP = new NetworkVariable<float>();
-
-    [Header("Defense Stats")]
-    public float defense = 1f; 
-    public float magicDefense = 1f;
-    public float evasion = 0f;      
     
-    [Header("Offense Stats")]
-    public AttackAttribute attackAttribute = AttackAttribute.Physical;
-    public float accuracy = 100f;
-    public float physicalPenetration = 0f;
-    public float magicPenetration = 0f;
-
-    [Header("Attack Pattern Config")]
-    public EnemyAttackType attackType;
+    // 런타임 캐싱 변수들
+    [HideInInspector] public float baseDamage;
+    [HideInInspector] public float accuracy;
+    [HideInInspector] public float penetration; // 물리/마법 공용
+    [HideInInspector] public float defense;
+    [HideInInspector] public float magicDefense;
+    [HideInInspector] public float evasion;
 
     private Rigidbody2D rb;
     public bool isStunned = false;
     private bool isDead = false;
-
+    
     void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
@@ -37,7 +30,29 @@ public class EnemyStatManager : NetworkBehaviour, IDamageable
     {
         if (IsServer)
         {
-            currentHP.Value = maxHP;
+            if (enemyData != null)
+            {
+                currentHP.Value = enemyData.maxHP;
+
+                // 공격 스탯 캐싱
+                baseDamage = enemyData.baseDamage;
+                accuracy = enemyData.accuracy;
+                penetration = (enemyData.attackAttribute == AttackAttribute.Physical) ? enemyData.physicalPenetration : enemyData.magicPenetration;
+
+                // 방어 스탯 캐싱 (오류 해결)
+                defense = enemyData.defense;
+                magicDefense = enemyData.magicDefense;
+                evasion = enemyData.evasion;
+
+                // StatusEffectManagerNetcode에 면역 플래그 전달
+                var statusManager = GetComponent<StatusEffectManagerNetcode>();
+                if (statusManager != null)
+                {
+                    // 아래 추가할 StatusEffectManagerNetcode의 변수에 접근
+                    statusManager.immuneElements = enemyData.immuneElements;
+                    statusManager.immuneCC = enemyData.immuneCC;
+                }
+            }
         }
     }
 

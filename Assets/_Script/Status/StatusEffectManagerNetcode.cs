@@ -14,6 +14,10 @@ public class StatusEffectManagerNetcode : NetworkBehaviour
     public float maxShock = 100f;
     private float curFire, curPoison, curBleed, curFrost, curShock;
 
+    [Header("Immunities (보스/엘리트 전용 면역 플래그)")]
+    public ElementFlags immuneElements = ElementFlags.None;
+    public StatusEffectFlags immuneCC = StatusEffectFlags.None;
+
     [Header("Offensive Modifiers (공격 스탯: 정수 1당 1% 증가)")]
     public float bonusFireDamage = 0f;       // 화염 피해 증가치 (0.2 = 20% 증가)
     public float bonusPoisonDamage = 0f;
@@ -76,37 +80,37 @@ public class StatusEffectManagerNetcode : NetworkBehaviour
         float finalAmount = amount * (1f - ElementalResistancePct);
         if (finalAmount <= 0f) return;
 
-        if ((types & ElementFlags.Fire) != 0)
+        if ((types & ElementFlags.Fire) != 0 && (immuneElements & ElementFlags.Fire) == 0)
         {
-            curFire += amount;
+            curFire += finalAmount;
             RefreshDoT(ref fireDotCor, FireDoTRoutine(baseDotDamage));
             if (curFire >= maxFire) TriggerFireExplosion(baseDotDamage);
         }
 
-        if ((types & ElementFlags.Poison) != 0)
+        if ((types & ElementFlags.Poison) != 0 && (immuneElements & ElementFlags.Poison) == 0)
         {
-            curPoison += amount;
+            curPoison += finalAmount;
             RefreshDoT(ref poisonDotCor, PoisonDoTRoutine(baseDotDamage));
             if (curPoison >= maxPoison) SetVulnerable(true, 5f);
         }
 
-        if ((types & ElementFlags.Bleed) != 0)
+        if ((types & ElementFlags.Bleed) != 0 && (immuneElements & ElementFlags.Bleed) == 0)
         {
-            curBleed += amount;
+            curBleed += finalAmount;
             RefreshDoT(ref bleedDotCor, BleedDoTRoutine(baseDotDamage));
         }
 
-        if ((types & ElementFlags.Frost) != 0)
+        if ((types & ElementFlags.Frost) != 0 && (immuneElements & ElementFlags.Frost) == 0)
         {
-            curFrost += amount;
-            ApplySlow(0.25f, 3f); // 기본 25% 슬로우
+            curFrost += finalAmount;
+            ApplySlow(0.25f, 3f);
             if (curFrost >= maxFrost) TriggerFrostStun();
         }
 
-        if ((types & ElementFlags.Shock) != 0)
+        if ((types & ElementFlags.Shock) != 0 && (immuneElements & ElementFlags.Shock) == 0)
         {
-            curShock += amount;
-            ApplySlow(0.25f, 3f); // 기본 25% 슬로우
+            curShock += finalAmount;
+            ApplySlow(0.25f, 3f);
             if (curShock >= maxShock) TriggerShockOverload();
         }
     }
@@ -202,15 +206,24 @@ public class StatusEffectManagerNetcode : NetworkBehaviour
     #region CC & Modifier Control
     private void ApplyDirectCC(StatusEffectFlags flags, ulong attackerId = 0, float duration = 2f)
     {
-        if ((flags & StatusEffectFlags.Stun) != 0) StartCoroutine(StunRoutine(duration));
-        if ((flags & StatusEffectFlags.Slow) != 0) ApplySlow(0.25f, duration);
-        if ((flags & StatusEffectFlags.Vulnerable) != 0) SetVulnerable(true, duration);
+        if ((flags & StatusEffectFlags.Stun) != 0 && (immuneCC & StatusEffectFlags.Stun) == 0)
+            StartCoroutine(StunRoutine(duration));
+
+        if ((flags & StatusEffectFlags.Slow) != 0 && (immuneCC & StatusEffectFlags.Slow) == 0)
+            ApplySlow(0.25f, duration);
+
+        if ((flags & StatusEffectFlags.Vulnerable) != 0 && (immuneCC & StatusEffectFlags.Vulnerable) == 0)
+            SetVulnerable(true, duration);
 
         if (((flags & StatusEffectFlags.Taunt) != 0 || (flags & StatusEffectFlags.Fear) != 0) && attackerId != 0)
         {
-            effectSourceId.Value = attackerId; // 타겟 ID 등록
-            if ((flags & StatusEffectFlags.Taunt) != 0) StartCoroutine(TauntRoutine(duration));
-            if ((flags & StatusEffectFlags.Fear) != 0) StartCoroutine(FearRoutine(duration));
+            effectSourceId.Value = attackerId;
+
+            if ((flags & StatusEffectFlags.Taunt) != 0 && (immuneCC & StatusEffectFlags.Taunt) == 0)
+                StartCoroutine(TauntRoutine(duration));
+
+            if ((flags & StatusEffectFlags.Fear) != 0 && (immuneCC & StatusEffectFlags.Fear) == 0)
+                StartCoroutine(FearRoutine(duration));
         }
     }
 

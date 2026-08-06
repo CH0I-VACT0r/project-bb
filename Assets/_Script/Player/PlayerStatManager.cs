@@ -37,11 +37,27 @@ public class PlayerStatManager : NetworkBehaviour
     public NetworkVariable<float> Luck = new NetworkVariable<float>(1.0f);
     public NetworkVariable<float> Charisma = new NetworkVariable<float>(1.0f);
 
-    [Header("4. Resistance (CC Duration Reduction %)")]
-    public NetworkVariable<float> StatusResistance = new NetworkVariable<float>(0f);
+    [Header("4. Elemental Offense")]
+    public NetworkVariable<float> BonusFireDamage = new NetworkVariable<float>(0f);
+    public NetworkVariable<float> BonusPoisonDamage = new NetworkVariable<float>(0f);
+    public NetworkVariable<float> BonusBleedDamage = new NetworkVariable<float>(0f);
+    public NetworkVariable<float> BonusSlowEffect = new NetworkVariable<float>(0f);
+    public NetworkVariable<float> BonusVulnerableEffect = new NetworkVariable<float>(0f);
 
-    // 상태 이상 리스트
-    public enum StatusType { Stun, Burn, Freeze, Shock, Poison, Bleed }
+    [Header("5. Duration Modifiers")]
+    public NetworkVariable<float> BonusStunDuration = new NetworkVariable<float>(0f);
+    public NetworkVariable<float> BonusSlowDuration = new NetworkVariable<float>(0f);
+    public NetworkVariable<float> BonusTauntDuration = new NetworkVariable<float>(0f);
+    public NetworkVariable<float> BonusFearDuration = new NetworkVariable<float>(0f);
+    public NetworkVariable<float> BonusVulnerableDuration = new NetworkVariable<float>(0f);
+    public NetworkVariable<float> BonusFireDuration = new NetworkVariable<float>(0f);
+    public NetworkVariable<float> BonusPoisonDuration = new NetworkVariable<float>(0f);
+    public NetworkVariable<float> BleedDecayReduction = new NetworkVariable<float>(0f);
+
+    [Header("6. Advanced Defenses")]
+    public NetworkVariable<int> CcResistanceStat = new NetworkVariable<int>(0);
+    public NetworkVariable<int> DotDamageResistanceStat = new NetworkVariable<int>(0);
+    public NetworkVariable<int> ElementalResistanceStat = new NetworkVariable<int>(0);
 
     public event Action OnShieldBroken;
 
@@ -57,7 +73,6 @@ public class PlayerStatManager : NetworkBehaviour
                 Defense.Value = classData.defense;
                 MagicDefense.Value = classData.magicDefense;
                 Evasion.Value = classData.evasion;
-
                 MaxShield.Value = classData.maxShield;
                 ShieldResetTime.Value = classData.shieldResetTime;
 
@@ -73,12 +88,52 @@ public class PlayerStatManager : NetworkBehaviour
                 Luck.Value = classData.luck;
                 Charisma.Value = classData.charisma;
 
-                StatusResistance.Value = classData.statusResistance;
+                BonusFireDamage.Value = classData.bonusFireDamage;
+                BonusPoisonDamage.Value = classData.bonusPoisonDamage;
+                BonusBleedDamage.Value = classData.bonusBleedDamage;
+                BonusSlowEffect.Value = classData.bonusSlowEffect;
+                BonusVulnerableEffect.Value = classData.bonusVulnerableEffect;
+
+                BonusStunDuration.Value = classData.bonusStunDuration;
+                BonusSlowDuration.Value = classData.bonusSlowDuration;
+                BonusTauntDuration.Value = classData.bonusTauntDuration;
+                BonusFearDuration.Value = classData.bonusFearDuration;
+                BonusVulnerableDuration.Value = classData.bonusVulnerableDuration;
+                BonusFireDuration.Value = classData.bonusFireDuration;
+                BonusPoisonDuration.Value = classData.bonusPoisonDuration;
+                BleedDecayReduction.Value = classData.bleedDecayReduction;
+
+                CcResistanceStat.Value = classData.ccResistanceStat;
+                DotDamageResistanceStat.Value = classData.dotDamageResistanceStat;
+                ElementalResistanceStat.Value = classData.elementalResistanceStat;
             }
 
             // 런타임 현재 체력/쉴드를 최대치로 초기화
             CurrentHealth.Value = MaxHealth.Value;
             CurrentShield.Value = MaxShield.Value;
+
+            StatusEffectManagerNetcode statusManager = GetComponent<StatusEffectManagerNetcode>();
+            if (statusManager != null)
+            {
+                statusManager.bonusFireDamage = BonusFireDamage.Value;
+                statusManager.bonusPoisonDamage = BonusPoisonDamage.Value;
+                statusManager.bonusBleedDamage = BonusBleedDamage.Value;
+                statusManager.bonusSlowEffect = BonusSlowEffect.Value;
+                statusManager.bonusVulnerableEffect = BonusVulnerableEffect.Value;
+
+                statusManager.bonusStunDuration = BonusStunDuration.Value;
+                statusManager.bonusSlowDuration = BonusSlowDuration.Value;
+                statusManager.bonusTauntDuration = BonusTauntDuration.Value;
+                statusManager.bonusFearDuration = BonusFearDuration.Value;
+                statusManager.bonusVulnerableDuration = BonusVulnerableDuration.Value;
+                statusManager.bonusFireDuration = BonusFireDuration.Value;
+                statusManager.bonusPoisonDuration = BonusPoisonDuration.Value;
+                statusManager.bleedDecayReduction = BleedDecayReduction.Value;
+
+                statusManager.ccResistanceStat = CcResistanceStat.Value;
+                statusManager.dotDamageResistanceStat = DotDamageResistanceStat.Value;
+                statusManager.elementalResistanceStat = ElementalResistanceStat.Value;
+            }
         }
     }
 
