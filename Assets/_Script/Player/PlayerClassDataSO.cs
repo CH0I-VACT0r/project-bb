@@ -3,7 +3,10 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "New Player Class", menuName = "ScriptableObjects/PlayerClassData")]
 public class PlayerClassDataSO : ScriptableObject
 {
-    public string className = "Warrior";
+    [Header("0. Class Identity & Spawning")]
+    public int classId;                   // 직업 식별 ID (예: 101 = 전사, 102 = 마법사)
+    public string className = "Barbarian";
+    public GameObject playerPrefab;
 
     [Header("1. Survival & Defense")]
     public float maxHealth = 100f;
