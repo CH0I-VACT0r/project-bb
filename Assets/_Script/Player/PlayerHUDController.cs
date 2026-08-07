@@ -7,13 +7,14 @@ public class PlayerHUDController : MonoBehaviour
 
     private UIDocument uiDocument;
 
-    // UI Toolkit 요소들
-    private ProgressBar hpBar;
-    private ProgressBar shieldBar;
+    // UI Toolkit 쿼리용 변수 변경
+    private VisualElement hpOrbFluid;
+    private Label hpOrbText;
+    private VisualElement shieldContainer;
     private VisualElement identityContainer;
 
     private PlayerStatManager localPlayerStats;
-    private BarbarianIdentityUI barbarianUIController; // 바바리안 UI 로직 인스턴스
+    private BarbarianIdentityUI barbarianUIController;
 
     private void Awake()
     {
@@ -21,28 +22,29 @@ public class PlayerHUDController : MonoBehaviour
         else Destroy(gameObject);
 
         uiDocument = GetComponent<UIDocument>();
+        uiDocument.rootVisualElement.style.display = DisplayStyle.None;
     }
 
     public void BindLocalPlayer(PlayerStatManager statManager)
     {
+        uiDocument.rootVisualElement.style.display = DisplayStyle.Flex;
         localPlayerStats = statManager;
         var root = uiDocument.rootVisualElement;
 
-        // UXML에 정의한 각 요소의 Name(ID)으로 쿼리합니다.
-        hpBar = root.Q<ProgressBar>("hp-bar");
-        shieldBar = root.Q<ProgressBar>("shield-bar");
+        // UXML 요소 매핑
+        hpOrbFluid = root.Q<VisualElement>("hp-orb-fluid");
+        hpOrbText = root.Q<Label>("hp-orb-text");
+        shieldContainer = root.Q<VisualElement>("shield-container");
         identityContainer = root.Q<VisualElement>("identity-container");
 
         // 이벤트 구독
         localPlayerStats.CurrentHealth.OnValueChanged += UpdateHPUI;
         localPlayerStats.MaxHealth.OnValueChanged += UpdateHPUI;
         localPlayerStats.CurrentShield.OnValueChanged += UpdateShieldUI;
-        localPlayerStats.MaxShield.OnValueChanged += UpdateShieldUI;
 
-        // 직업 고유 UI(UXML) 동적 생성 및 바인딩
         InstantiateIdentityUI(statManager);
 
-        // 초기 UI 업데이트
+        // 초기 수치 반영
         UpdateHPUI(0, localPlayerStats.CurrentHealth.Value);
         UpdateShieldUI(0, localPlayerStats.CurrentShield.Value);
     }
@@ -51,19 +53,16 @@ public class PlayerHUDController : MonoBehaviour
     {
         if (statManager.classData.identityUXML == null || identityContainer == null) return;
 
-        identityContainer.Clear(); // 기존 UI 노드 제거
+        identityContainer.Clear();
 
-        // SO에 등록된 UXML을 인스턴스화하여 하단 컨테이너에 자식으로 추가
         VisualElement identityInstance = statManager.classData.identityUXML.Instantiate();
         identityContainer.Add(identityInstance);
 
-        // 직업명에 따라 알맞은 로직 클래스를 연결
         if (statManager.classData.className == "Barbarian")
         {
             var barbarianLogic = statManager.GetComponent<BarbarianIdentityNetcode>();
             if (barbarianLogic != null)
             {
-                // UI Toolkit은 MonoBehaviour가 불필요하므로 순수 C# 클래스로 인스턴스 생성
                 barbarianUIController = new BarbarianIdentityUI();
                 barbarianUIController.Bind(identityInstance, barbarianLogic);
             }
@@ -72,33 +71,49 @@ public class PlayerHUDController : MonoBehaviour
 
     private void UpdateHPUI(float previousValue, float newValue)
     {
-        if (localPlayerStats == null || hpBar == null) return;
+        if (localPlayerStats == null || hpOrbFluid == null || hpOrbText == null) return;
 
         float current = localPlayerStats.CurrentHealth.Value;
         float max = localPlayerStats.MaxHealth.Value;
 
-        hpBar.value = current;
-        hpBar.highValue = max;
-        hpBar.title = $"{Mathf.CeilToInt(current)} / {Mathf.CeilToInt(max)}";
+        // 퍼센트 계산 (0.0 ~ 100.0)
+        float percent = Mathf.Clamp01(current / max) * 100f;
+
+        // fluid 요소의 높이를 퍼센트로 조절
+        hpOrbFluid.style.height = new Length(percent, LengthUnit.Percent);
+
+        // 텍스트 업데이트
+        hpOrbText.text = $"{Mathf.CeilToInt(current)} / {Mathf.CeilToInt(max)}";
     }
 
     private void UpdateShieldUI(float previousValue, float newValue)
     {
-        if (localPlayerStats == null || shieldBar == null) return;
+        if (shieldContainer == null) return;
 
-        float current = localPlayerStats.CurrentShield.Value;
-        float max = localPlayerStats.MaxShield.Value;
+        int targetShieldCount = Mathf.CeilToInt(newValue);
+        int currentIconCount = shieldContainer.childCount;
 
-        if (max > 0)
+        // 쉴드가 증가한 경우: 아이콘 추가
+        if (currentIconCount < targetShieldCount)
         {
-            shieldBar.style.display = DisplayStyle.Flex; // 쉴드가 있을 때만 표시
-            shieldBar.value = current;
-            shieldBar.highValue = max;
-            shieldBar.title = $"{Mathf.CeilToInt(current)} / {Mathf.CeilToInt(max)}";
+            int amountToAdd = targetShieldCount - currentIconCount;
+            for (int i = 0; i < amountToAdd; i++)
+            {
+                VisualElement shieldIcon = new VisualElement();
+                shieldIcon.AddToClassList("shield-icon");
+                shieldContainer.Add(shieldIcon);
+            }
         }
-        else
+        // 쉴드가 감소한 경우: 아이콘 제거 (왼쪽부터 깎임)
+        else if (currentIconCount > targetShieldCount)
         {
-            shieldBar.style.display = DisplayStyle.None; // 쉴드 0이면 숨김
+            int amountToRemove = currentIconCount - targetShieldCount;
+            for (int i = 0; i < amountToRemove; i++)
+            {
+                // 트리의 가장 마지막에 추가된 자식 노드를 제거
+                // (row-reverse로 인해 시각적으로는 가장 왼쪽에 배치된 아이콘입니다)
+                shieldContainer.RemoveAt(shieldContainer.childCount - 1);
+            }
         }
     }
 
@@ -109,7 +124,6 @@ public class PlayerHUDController : MonoBehaviour
             localPlayerStats.CurrentHealth.OnValueChanged -= UpdateHPUI;
             localPlayerStats.MaxHealth.OnValueChanged -= UpdateHPUI;
             localPlayerStats.CurrentShield.OnValueChanged -= UpdateShieldUI;
-            localPlayerStats.MaxShield.OnValueChanged -= UpdateShieldUI;
         }
 
         if (barbarianUIController != null)

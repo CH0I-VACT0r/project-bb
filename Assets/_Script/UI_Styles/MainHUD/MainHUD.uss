@@ -1,0 +1,158 @@
+/* 전체 루트 */
+.hud-root {
+    flex-grow: 1;
+    justify-content: flex-end; /* 하단으로 밀기 */
+    flex-direction: column;    /* 세로 축 기준 설정 */
+    width: 100%;
+    height: 100%;
+    picking-mode: ignore;
+}
+
+.hud-bottom-container {
+    flex-direction: row;
+    justify-content: center;
+    align-items: flex-end;
+    padding-bottom: 30px;
+    picking-mode: ignore;
+}
+
+/* 1. 왼쪽 섹션 */
+.health-section {
+    width: 350px; 
+    margin-right: 25px;
+    flex-direction: row;       /* 쉴드와 체력구슬을 가로로 배치 */
+    justify-content: flex-end; /* 전체를 체력구슬(오른쪽) 쪽으로 밀착 */
+    align-items: flex-end;     /* 바닥 선에 맞춤 */
+}
+
+.shield-container {
+    flex-direction: row;
+    flex-wrap: wrap; /* 영역 초과 시 줄바꿈 */
+    margin-top: 80px;
+}
+
+.shield-icon {
+    width: 32px;  /* 준비된 32x32 픽셀 비율 일치 */
+    height: 32px;
+    background-color: rgb(0, 0, 0);
+    border-width: 2px;
+    border-color: rgb(150, 150, 150);
+    margin-right: 4px;
+    margin-bottom: 4px;
+    /* 실제 유니티 에디터에서 배경 이미지를 할당하면 활성화됩니다. */
+    /* background-image: url('경로'); */
+    -unity-background-scale-mode: scale-to-fit;
+}
+
+/* 2. 쉴드 컨테이너 (핵심: row-reverse) */
+.shield-container {
+    flex-direction: row-reverse; /* 우측(체력바 쪽)에서 좌측으로 쌓임 */
+    flex-wrap: wrap-reverse;     /* 영역 초과 시 위로 줄바꿈 */
+    align-items: center;
+    margin-right: 25px;          /* 체력 구슬과의 간격 */
+    margin-bottom: 10px;
+}
+
+.shield-icon {
+    width: 32px;
+    height: 32px;
+    background-color: rgba(0, 0, 0, 0.9);
+    border-width: 2px;
+    border-color: rgb(150, 150, 150);
+    margin-left: 4px; /* 역방향이므로 왼쪽에 여백을 줌 */
+    margin-bottom: 4px;
+    -unity-background-scale-mode: scale-to-fit;
+}
+
+/* 3. 동그란 체력바 (Orb) 부모 컨테이너 */
+.hp-orb-container {
+    width: 125px;  /* 구슬 크기 (정사각형) */
+    height: 125px;
+    border-radius: 50%; /* 완벽한 원형으로 깎음 */
+    background-color: rgb(20, 20, 20);
+    border-width: 4px;
+    border-color: rgb(70, 70, 70);
+    overflow: hidden; /* 원형 바깥으로 튀어나가는 내부 액체를 가림 */
+    justify-content: flex-end; /* 액체가 바닥에서부터 차오르도록 정렬 */
+    margin-right: 20px;
+    margin-bottom: 20px;
+}
+
+/* 4. 체력 용액 (C#에서 height를 0% ~ 100%로 조절하여 깎임 구현) */
+.hp-orb-fluid {
+    width: 100%;
+    height: 100%; /* 임시 확인용 100%. 스크립트로 조절됨 */
+    background-color: rgb(200, 30, 30);
+    transition: height 0.2s ease-out;
+}
+
+/* 5. 구슬 정중앙 체력 텍스트 */
+.hp-orb-text {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0; /* 부모 크기에 꽉 차게 고정 */
+    -unity-text-align: middle-center;     /* 글자를 정중앙 정렬 */
+    color: white;
+    font-size: 16px;
+    -unity-font-style: bold;
+    margin: 0; padding: 0;
+}
+
+/* 2. 중앙 섹션 */
+.center-section {
+    width: 300px;
+    justify-content: flex-end;
+}
+
+.identity-container {
+    height: 120px;
+    background-color: rgba(0, 0, 0, 0.7);
+    border-width: 4px;
+    border-color: black;
+    margin-bottom: 5px;
+}
+
+.class-level-container {
+    flex-direction: row;
+    justify-content: space-between; /* 텍스트 양끝 정렬 */
+}
+
+.class-level-text {
+    font-size: 18px;
+    -unity-font-style: bold;
+    color: white;
+}
+
+/* 3. 오른쪽 섹션 */
+.skill-section {
+    width: 350px; 
+    margin-left: 25px;
+    justify-content: flex-end;
+}
+
+.skill-container {
+    flex-direction: row;
+}
+
+.skill-slot {
+    width: 80px;
+    height: 80px;
+    background-color: rgb(30, 30, 30);
+    border-width: 3px;
+    border-color: black;
+    margin-right: 20px;
+    -unity-background-scale-mode: scale-to-fit; 
+}
+
+.skill-hotkey {
+    position: absolute;
+    right: 0px;
+    bottom: 0px;
+    background-color: white;
+    color: black;
+    font-size: 14px;
+    -unity-font-style: bold;
+    border-width: 1px;
+    border-color: black;
+    padding: 1px 4px;
+    margin: 0; /* 기본 여백 제거 */
+}

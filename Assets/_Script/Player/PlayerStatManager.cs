@@ -63,6 +63,20 @@ public class PlayerStatManager : NetworkBehaviour
 
     public override void OnNetworkSpawn()
     {
+        base.OnNetworkSpawn();
+
+        if (IsOwner)
+        {
+            if (PlayerHUDController.Instance != null)
+            {
+                PlayerHUDController.Instance.BindLocalPlayer(this);
+            }
+            else
+            {
+                Debug.LogError("PlayerHUDController 인스턴스를 찾을 수 없습니다.");
+            }
+        }
+
         if (IsServer)
         {
             // SO 데이터가 연결되어 있다면 기본 스탯을 덮어씌움

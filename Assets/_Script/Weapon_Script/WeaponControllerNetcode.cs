@@ -88,6 +88,18 @@ public class WeaponControllerNetcode : NetworkBehaviour
         currentOrbitSpeed = weaponData.orbitSpeed;
     }
 
+    private void OnDisable()
+    {
+        StopAllCoroutines();  // 실행시킨 모든 코루틴 즉시 정지
+        isAttacking = false; // 공격 상태 강제 초기화 (Deadlock 방지)
+        
+        if (aoeCoroutine != null)
+        {
+            aoeCoroutine = null; // 단일 코루틴 참조 변수 초기화
+        }
+        currentState = WeaponState.Returning;
+    }
+
     void Update()
     {
         if (playerTransform == null)
@@ -206,6 +218,11 @@ public class WeaponControllerNetcode : NetworkBehaviour
 
         for (int i = 0; i < weaponData.actionSteps.Length; i++)
         {
+            if (this == null || gameObject == null || transform == null)
+            {
+                yield break; // 코루틴 즉시 강제 종료
+            }
+
             currentComboIndex = i;
             Vector3 direction = networkAimDir.Value;
             WeaponActionStep currentStep = weaponData.actionSteps[i];
@@ -214,6 +231,11 @@ public class WeaponControllerNetcode : NetworkBehaviour
 
             if (isAoEAttack)
             {
+                if (playerTransform == null)
+                {
+                    yield break;
+                }
+
                 float totalReach = weaponData.orbitRadius + weaponData.travelDistance;
                 Vector3 targetPos = playerTransform.position + (Vector3)(direction * totalReach);
 
@@ -229,9 +251,13 @@ public class WeaponControllerNetcode : NetworkBehaviour
             RequestComboAttackServerRpc(currentComboIndex, direction);
             yield return new WaitForSeconds(currentStep.stepDelay);
         }
-        currentState = WeaponState.Returning;
-        autoAttackTimer = weaponData.comboWindow;
-        isAttacking = false;
+
+        if (this != null && transform != null)
+        {
+            currentState = WeaponState.Returning;
+            autoAttackTimer = weaponData.comboWindow;
+            isAttacking = false;
+        }
     }
 
     private void PlayAttackVisualLocal(Vector3 direction, Vector3 targetPos, int comboIdx)
