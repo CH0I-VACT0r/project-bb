@@ -79,6 +79,11 @@ public class WeaponControllerNetcode : NetworkBehaviour
         // 왜곡 방지: 무기를 플레이어의 자식에서 강제 분리
         transform.SetParent(null);
 
+        if (weaponData != null)
+        {
+            transform.localScale = new Vector3(weaponData.weaponScale, weaponData.weaponScale, 1f);
+        }
+
         if (playerTransform != null)
         {
             playerSprite = playerTransform.GetComponent<SpriteRenderer>();
@@ -86,6 +91,11 @@ public class WeaponControllerNetcode : NetworkBehaviour
 
         targetOrbitSpeed = weaponData.orbitSpeed;
         currentOrbitSpeed = weaponData.orbitSpeed;
+
+        if (weaponData != null && weaponData.weaponSprite != null)
+        {
+            weaponSprite.sprite = weaponData.weaponSprite;
+        }
     }
 
     private void OnDisable()

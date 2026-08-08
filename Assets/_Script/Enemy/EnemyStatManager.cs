@@ -2,7 +2,7 @@ using System.Collections;
 using Unity.Netcode;
 using UnityEngine;
 
-public enum EnemyAttackType { ConeSlash, Dash, Projectile }
+public enum EnemyAttackType { Melee, Projectile }
 
 public class EnemyStatManager : NetworkBehaviour, IDamageable
 {
@@ -122,14 +122,22 @@ public class EnemyStatManager : NetworkBehaviour, IDamageable
         if (isDead) return;
         isDead = true;
 
-        NetworkObject netObj = GetComponent<NetworkObject>();
-        if (netObj != null && netObj.IsSpawned)
+        EnemyAINetcode aiNetcode = GetComponent<EnemyAINetcode>();
+        if (aiNetcode != null)
         {
-            netObj.Despawn(true);
+            aiNetcode.HandleDeath();
         }
         else
         {
-            Destroy(gameObject);
+            NetworkObject netObj = GetComponent<NetworkObject>();
+            if (netObj != null && netObj.IsSpawned)
+            {
+                netObj.Despawn(true);
+            }
+            else
+            {
+                Destroy(gameObject);
+            }
         }
     }
 }

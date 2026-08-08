@@ -206,7 +206,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 3, y: 3, z: 2}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 8121018516562590896}
@@ -261,7 +261,7 @@ SpriteRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_Sprite: {fileID: 10913, guid: 0000000000000000f000000000000000, type: 0}
-  m_Color: {r: 0.31480956, g: 0.36929074, b: 0.6981132, a: 1}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
@@ -285,7 +285,7 @@ MonoBehaviour:
   ShowTopMostFoldoutHeaderGroup: 1
   playerStats: {fileID: 5867041930185482621}
   playerTransform: {fileID: 8121018516562590896}
-  weaponData: {fileID: 11400000, guid: f04297babce672f419be52f8927c26e7, type: 2}
+  weaponData: {fileID: 11400000, guid: f39674510b028924fa9833ce560fa983, type: 2}
   enemyLayer:
     serializedVersion: 2
     m_Bits: 128

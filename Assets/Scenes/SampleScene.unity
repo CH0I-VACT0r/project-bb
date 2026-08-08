@@ -750,7 +750,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyPoolManager
   ShowTopMostFoldoutHeaderGroup: 1
-  enemyPrefab: {fileID: 3338262658013833214, guid: d7c6196ef90d05c40b420b83a4bc63ae, type: 3}
+  enemyPrefab: {fileID: 8434304554716802035, guid: c8293e583571a3f46bc5ae6d1e906a72, type: 3}
   defaultCapacity: 50
   maxCapacity: 200
 --- !u!1 &1574301657

@@ -54,6 +54,10 @@ public class WeaponDataSO : ScriptableObject
     public string weaponName;
     public AttackAttribute attackAttribute;
 
+    [Header("Rendering")]
+    public Sprite weaponSprite;
+    public float weaponScale = 1.0f;
+
     [Header("Targeting Settings")]
     public bool isBossPriority = true; // 보스 우선 타격 여부
     public float autoTargetRange = 10f; // 오토 타겟 탐색 반경
@@ -63,6 +67,7 @@ public class WeaponDataSO : ScriptableObject
     public float adScaling = 1.0f;
     public float apScaling = 0.0f;
     public float baseCooldown = 1.0f;
+   
 
     [Header("Combo / Multi-Step Actions")]
     public WeaponActionStep[] actionSteps;
