@@ -65,6 +65,15 @@ public class PlayerStatManager : NetworkBehaviour, IDamageable
     {
         base.OnNetworkSpawn();
 
+        if (classData != null && classData.classAnimator != null)
+        {
+            Animator anim = GetComponent<Animator>();
+            if (anim != null)
+            {
+                anim.runtimeAnimatorController = classData.classAnimator;
+            }
+
+        }
         if (IsOwner)
         {
             if (PlayerHUDController.Instance != null)

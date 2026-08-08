@@ -9,6 +9,9 @@ public class PlayerClassDataSO : ScriptableObject
     public string className = "Barbarian";
     public GameObject playerPrefab;
 
+    [Header("Visual Data")]
+    public RuntimeAnimatorController classAnimator;
+
     [Header("UI Toolkit (UXML)")]
     public VisualTreeAsset identityUXML;
 
