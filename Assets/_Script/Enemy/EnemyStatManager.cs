@@ -78,7 +78,8 @@ public class EnemyStatManager : NetworkBehaviour, IDamageable
             float effectiveMagicDefense = Mathf.Max(0f, magicDefense - info.attackerPenetration);
             finalDamage = Mathf.Max(1f, finalDamage - effectiveMagicDefense);
         }
-
+        finalDamage = Mathf.Round(finalDamage);
+        finalDamage = Mathf.Max(1f, finalDamage);
         currentHP.Value -= finalDamage;
         ShowDamagePopupClientRpc(finalDamage, transform.position, info.isCritical, false);
 

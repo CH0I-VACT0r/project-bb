@@ -306,12 +306,13 @@ GameObject:
   - component: {fileID: 8121018516562590896}
   - component: {fileID: 7044712299102433557}
   - component: {fileID: 1817134247278321362}
+  - component: {fileID: 2323771786816152097}
   - component: {fileID: 1819556914048326843}
   - component: {fileID: 5867041930185482621}
   - component: {fileID: 7545271995357182030}
   m_Layer: 6
   m_Name: Player
-  m_TagString: Untagged
+  m_TagString: Player
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -416,9 +417,55 @@ Rigidbody2D:
     serializedVersion: 2
     m_Bits: 0
   m_Interpolate: 1
-  m_SleepingMode: 1
+  m_SleepingMode: 0
   m_CollisionDetection: 0
   m_Constraints: 4
+--- !u!61 &2323771786816152097
+BoxCollider2D:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4638417343498770575}
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Density: 1
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_ForceSendLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_ForceReceiveLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_ContactCaptureLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_CallbackLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_IsTrigger: 0
+  m_UsedByEffector: 0
+  m_CompositeOperation: 0
+  m_CompositeOrder: 0
+  m_Offset: {x: 0, y: 0}
+  m_SpriteTilingProperty:
+    border: {x: 0, y: 0, z: 0, w: 0}
+    pivot: {x: 0.5, y: 0.5}
+    oldSize: {x: 1, y: 1}
+    newSize: {x: 1, y: 1}
+    adaptiveTilingThreshold: 0.5
+    drawMode: 0
+    adaptiveTiling: 0
+  m_AutoTiling: 0
+  m_Size: {x: 1, y: 1}
+  m_EdgeRadius: 0
 --- !u!114 &1819556914048326843
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -431,7 +478,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 2264170457
+  GlobalObjectIdHash: 3900103571
   InScenePlacedSourceGlobalObjectIdHash: 0
   DeferredDespawnTick: 0
   Ownership: 1
@@ -498,7 +545,37 @@ MonoBehaviour:
     m_InternalValue: 1
   Charisma:
     m_InternalValue: 1
-  StatusResistance:
+  BonusFireDamage:
+    m_InternalValue: 0
+  BonusPoisonDamage:
+    m_InternalValue: 0
+  BonusBleedDamage:
+    m_InternalValue: 0
+  BonusSlowEffect:
+    m_InternalValue: 0
+  BonusVulnerableEffect:
+    m_InternalValue: 0
+  BonusStunDuration:
+    m_InternalValue: 0
+  BonusSlowDuration:
+    m_InternalValue: 0
+  BonusTauntDuration:
+    m_InternalValue: 0
+  BonusFearDuration:
+    m_InternalValue: 0
+  BonusVulnerableDuration:
+    m_InternalValue: 0
+  BonusFireDuration:
+    m_InternalValue: 0
+  BonusPoisonDuration:
+    m_InternalValue: 0
+  BleedDecayReduction:
+    m_InternalValue: 0
+  CcResistanceStat:
+    m_InternalValue: 0
+  DotDamageResistanceStat:
+    m_InternalValue: 0
+  ElementalResistanceStat:
     m_InternalValue: 0
 --- !u!114 &7545271995357182030
 MonoBehaviour:

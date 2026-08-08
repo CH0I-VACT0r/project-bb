@@ -2,7 +2,7 @@ using UnityEngine;
 using Unity.Netcode;
 using System;
 
-public class PlayerStatManager : NetworkBehaviour
+public class PlayerStatManager : NetworkBehaviour, IDamageable
 {
     [Header("Class Setup")]
     public PlayerClassDataSO classData;
@@ -192,27 +192,23 @@ public class PlayerStatManager : NetworkBehaviour
             return;
         }
 
-        // 회피 연산
         float effectiveEvasion = Mathf.Max(0f, Evasion.Value - info.attackerAccuracy);
         if (UnityEngine.Random.Range(0f, 100f) < effectiveEvasion)
         {
             return;
         }
 
-        // 회피 실패 시 쉴드 재생 대기시간 초기화
         lastDamageTime = Time.time;
 
-        // 쉴드 연산
+        // 2. 쉴드 연산 확인
         if (CurrentShield.Value >= 1f)
         {
-            CurrentShield.Value -= 1f; // 쉴드 1 스택 차감
-            OnShieldBroken?.Invoke(); // 쉴드 파괴 이벤트 발생
-            GrantInvincibility(0.2f);  // 쉴드 파괴 후 무적 0.2초 부여
-
-            return;
+            CurrentShield.Value -= 1f;
+            OnShieldBroken?.Invoke();
+            GrantInvincibility(0.2f);
+            return; // 쉴드가 있으면 여기서 끝남 (체력 안 깎임)
         }
 
-        // 방어력 및 관통 연산
         float finalDamage = info.damageAmount;
 
         if (info.attackType == AttackAttribute.Physical)
@@ -226,10 +222,11 @@ public class PlayerStatManager : NetworkBehaviour
             finalDamage = Mathf.Max(1f, finalDamage - effectiveMagicDefense);
         }
 
-        // 최종 체력 차감
+        // 3. 실제 체력 차감 확인
+        finalDamage = Mathf.Round(finalDamage);
         CurrentHealth.Value -= finalDamage;
 
-        GrantInvincibility(0.2f); // 피격 무적
+        GrantInvincibility(0.2f);
 
         if (CurrentHealth.Value <= 0)
         {

@@ -15,6 +15,8 @@ GameObject:
   - component: {fileID: 3012036235855085303}
   - component: {fileID: 3966190043329707056}
   - component: {fileID: 7669152264725958246}
+  - component: {fileID: -8122675108330356504}
+  - component: {fileID: -4185144815532637997}
   m_Layer: 7
   m_Name: Enemy
   m_TagString: Untagged
@@ -108,7 +110,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 2167549486
+  GlobalObjectIdHash: 671059344
   InScenePlacedSourceGlobalObjectIdHash: 0
   DeferredDespawnTick: 0
   Ownership: 1
@@ -145,7 +147,7 @@ Rigidbody2D:
     serializedVersion: 2
     m_Bits: 0
   m_Interpolate: 1
-  m_SleepingMode: 1
+  m_SleepingMode: 0
   m_CollisionDetection: 0
   m_Constraints: 4
 --- !u!58 &3012036235855085303
@@ -178,7 +180,7 @@ CircleCollider2D:
   m_CallbackLayers:
     serializedVersion: 2
     m_Bits: 4294967295
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_UsedByEffector: 0
   m_CompositeOperation: 0
   m_CompositeOrder: 0
@@ -197,9 +199,16 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyStatManager
   ShowTopMostFoldoutHeaderGroup: 1
-  maxHP: 50
+  enemyData: {fileID: 11400000, guid: 8107be9581dfcde418e9432afd13c2d4, type: 2}
   currentHP:
     m_InternalValue: 0
+  baseDamage: 0
+  accuracy: 0
+  penetration: 0
+  defense: 0
+  magicDefense: 0
+  evasion: 0
+  isStunned: 0
 --- !u!114 &7669152264725958246
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -213,10 +222,70 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyAINetcode
   ShowTopMostFoldoutHeaderGroup: 1
-  moveSpeed: 1
   searchInterval: 0.5
-  separationRadius: 0.8
+  separationRadius: 0.5
   separationWeight: 1
   enemyLayer:
     serializedVersion: 2
-    m_Bits: 128
+    m_Bits: 384
+--- !u!114 &-8122675108330356504
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3338262658013833214}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 84875c5fc43f91042982789dd06d87a3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::StatusEffectManagerNetcode
+  ShowTopMostFoldoutHeaderGroup: 1
+  maxFire: 100
+  maxPoison: 100
+  maxBleed: 100
+  maxFrost: 100
+  maxShock: 100
+  immuneElements: 0
+  immuneCC: 0
+  bonusFireDamage: 0
+  bonusPoisonDamage: 0
+  bonusBleedDamage: 0
+  bonusSlowEffect: 0
+  bonusVulnerableEffect: 0
+  bonusStunDuration: 0
+  bonusSlowDuration: 0
+  bonusTauntDuration: 0
+  bonusFearDuration: 0
+  bonusVulnerableDuration: 0
+  bonusFireDuration: 0
+  bonusPoisonDuration: 0
+  bleedDecayReduction: 0
+  ccResistanceStat: 0
+  dotDamageResistanceStat: 0
+  elementalResistanceStat: 0
+  damageTakenMultiplier:
+    m_InternalValue: 1
+  moveSpeedMultiplier:
+    m_InternalValue: 1
+  isStunned:
+    m_InternalValue: 0
+  isTaunted:
+    m_InternalValue: 0
+  isFeared:
+    m_InternalValue: 0
+  effectSourceId:
+    m_InternalValue: 0
+--- !u!114 &-4185144815532637997
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3338262658013833214}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6f6157e043b1c834494b5a4ee5f8c8cf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyContactDamage
+  attackCooldown: 1

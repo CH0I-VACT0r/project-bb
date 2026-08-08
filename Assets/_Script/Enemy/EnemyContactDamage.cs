@@ -1,3 +1,4 @@
+using Unity.Netcode;
 using UnityEngine;
 
 [RequireComponent(typeof(Collider2D), typeof(EnemyStatManager))]
@@ -5,22 +6,55 @@ public class EnemyContactDamage : MonoBehaviour
 {
     private EnemyStatManager statManager;
     private float lastAttackTime;
-    public float attackCooldown = 1.0f; // �ٴ� ��Ʈ ����
+    public float attackCooldown = 1.0f; // 다단 히트 방지
+
+    private IDamageable currentTarget;
+    private Transform currentTargetTransform;
 
     void Awake()
     {
         statManager = GetComponent<EnemyStatManager>();
     }
 
-    void OnCollisionStay2D(Collision2D collision)
+    void Update()
     {
-        if (Time.time - lastAttackTime < attackCooldown) return;
+        // 넷코드 서버 권한 체크
+        if (NetworkManager.Singleton != null && !NetworkManager.Singleton.IsServer) return;
 
-        IDamageable target = collision.gameObject.GetComponent<IDamageable>();
-        if (target != null && collision.gameObject.CompareTag("Player"))
+        // 닿아있는 타겟이 있다면 쿨타임마다 대미지 적용
+        if (currentTarget != null)
         {
-            ApplyDamageToTarget(target, collision.transform.position);
-            lastAttackTime = Time.time;
+            if (Time.time - lastAttackTime >= attackCooldown)
+            {
+                ApplyDamageToTarget(currentTarget, currentTargetTransform.position);
+                lastAttackTime = Time.time;
+            }
+        }
+    }
+
+    void OnTriggerEnter2D(Collider2D other)
+    {
+        if (other.CompareTag("Player"))
+        {
+            // GetComponent 또는 GetComponentInParent를 사용하여 인터페이스 탐색
+            currentTarget = other.GetComponentInParent<IDamageable>();
+
+            // 타겟(스크립트)을 못 찾은 경우 대비 (Null 체크)
+            if (currentTarget != null)
+            {
+                currentTargetTransform = other.transform;
+                ApplyDamageToTarget(currentTarget, currentTargetTransform.position);
+                lastAttackTime = Time.time;
+            }
+        }
+    }
+
+    void OnTriggerExit2D(Collider2D other)
+    {
+        if (other.CompareTag("Player"))
+        {
+            currentTarget = null;
+            currentTargetTransform = null;
         }
     }
 
@@ -38,7 +72,7 @@ public class EnemyContactDamage : MonoBehaviour
             knockbackDir = knockbackDir,
             knockbackForce = data.knockbackForce,
 
-            // SO�� ���ǵ� �Ӽ�/CC�� ����
+            // SO에 정의된 속성/CC를 묻힘
             elementTypes = data.inflictElement,
             elementBuildUp = data.elementBuildupAmount,
             elementDotDamage = data.elementDotDamage,
