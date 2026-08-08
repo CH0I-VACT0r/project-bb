@@ -228,7 +228,7 @@ public class WeaponControllerNetcode : NetworkBehaviour
 
         for (int i = 0; i < weaponData.actionSteps.Length; i++)
         {
-            if (this == null || gameObject == null || transform == null)
+            if (this == null || gameObject == null || transform == null || playerTransform == null)
             {
                 yield break; // 코루틴 즉시 강제 종료
             }
@@ -237,26 +237,14 @@ public class WeaponControllerNetcode : NetworkBehaviour
             Vector3 direction = networkAimDir.Value;
             WeaponActionStep currentStep = weaponData.actionSteps[i];
 
+            // AoE(근접 범위) 판정 여부만 계산
             bool isAoEAttack = (currentStep.actionTypes & (WeaponTypeFlags.Melee | WeaponTypeFlags.Slash | WeaponTypeFlags.Laser | WeaponTypeFlags.Single)) != 0;
 
-            if (isAoEAttack)
-            {
-                if (playerTransform == null)
-                {
-                    yield break;
-                }
+            // 고정 사거리 대신, 궤도 안쪽의 적까지 탐지하는 동적 타겟팅 적용
+            Vector3 targetPos = CalculateVisualTargetPosition(direction);
 
-                float totalReach = weaponData.orbitRadius + weaponData.travelDistance;
-                Vector3 targetPos = playerTransform.position + (Vector3)(direction * totalReach);
-
-                PlayAttackVisualLocal(direction, targetPos, currentComboIndex);
-            }
-            else
-            {
-                attackTargetPos = transform.position;
-                if (aoeCoroutine != null) StopCoroutine(aoeCoroutine);
-                aoeCoroutine = StartCoroutine(ShowAoEVisual(direction, currentStep));
-            }
+            // 근접/원거리 구분 없이 무조건 무기를 전진시키고, 메쉬(isAoEAttack) 여부만 매개변수로 전달
+            PlayAttackVisualLocal(direction, targetPos, currentComboIndex, isAoEAttack);
 
             RequestComboAttackServerRpc(currentComboIndex, direction);
             yield return new WaitForSeconds(currentStep.stepDelay);
@@ -270,17 +258,54 @@ public class WeaponControllerNetcode : NetworkBehaviour
         }
     }
 
-    private void PlayAttackVisualLocal(Vector3 direction, Vector3 targetPos, int comboIdx)
+    private void PlayAttackVisualLocal(Vector3 direction, Vector3 targetPos, int comboIdx, bool isAoE)
     {
         attackTargetPos = targetPos;
         currentState = WeaponState.Attacking;
 
         if (aoeCoroutine != null) StopCoroutine(aoeCoroutine);
-        aoeCoroutine = StartCoroutine(ShowAoEVisual(direction, weaponData.actionSteps[comboIdx]));
+
+        // 근접/스플래시 타격일 때만 빨간색 범위 인디케이터 표시
+        if (isAoE)
+        {
+            aoeCoroutine = StartCoroutine(ShowAoEVisual(direction, weaponData.actionSteps[comboIdx]));
+        }
 
         float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
         transform.rotation = Quaternion.Euler(0, 0, angle);
         if (weaponSprite != null) weaponSprite.flipY = (direction.x < 0);
+    }
+
+    private Vector3 CalculateVisualTargetPosition(Vector3 direction)
+    {
+        float maxReach = weaponData.orbitRadius + weaponData.travelDistance;
+        Vector3 defaultTarget = playerTransform.position + (direction * maxReach);
+
+        // 최대 사거리 내의 모든 적 스캔
+        int hitCount = Physics2D.OverlapCircle(playerTransform.position, maxReach, enemyFilter, hitBuffer);
+        float closestDist = float.MaxValue;
+        Transform closestEnemy = null;
+
+        for (int i = 0; i < hitCount; i++)
+        {
+            Vector3 dirToEnemy = (hitBuffer[i].transform.position - playerTransform.position).normalized;
+
+            if (Vector2.Angle(direction, dirToEnemy) < 60f)
+            {
+                float dist = Vector2.Distance(playerTransform.position, hitBuffer[i].transform.position);
+                if (dist < closestDist)
+                {
+                    closestDist = dist;
+                    closestEnemy = hitBuffer[i].transform;
+                }
+            }
+        }
+
+        if (closestEnemy != null)
+        {
+            return closestEnemy.position;
+        }
+        return defaultTarget;
     }
 
     [ServerRpc]
