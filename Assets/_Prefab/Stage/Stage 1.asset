@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7770bed471c77294d9668a4e9c8c7816, type: 3}
+  m_Name: Stage 1
+  m_EditorClassIdentifier: Assembly-CSharp::StageDataSO
+  stageId: 1
+  mapPrefab: {fileID: 0}
+  normalEnemyPrefabs:
+  - {fileID: 8434304554716802035, guid: c8293e583571a3f46bc5ae6d1e906a72, type: 3}
+  bossPrefab: {fileID: 0}
+  waveCount: 3
+  timeBetweenWaves: 10

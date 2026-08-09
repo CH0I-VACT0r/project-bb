@@ -15,7 +15,7 @@ MonoBehaviour:
   weaponName: 
   attackAttribute: 0
   weaponSprite: {fileID: 21300000, guid: 36b01ed562b87d043b7e38d88beb2bec, type: 3}
-  weaponScale: 0.5
+  weaponScale: 0.4
   isBossPriority: 1
   autoTargetRange: 10
   baseDamage: 10
@@ -25,7 +25,7 @@ MonoBehaviour:
   actionSteps:
   - stepName: "1\uD0C0"
     actionTypes: 1
-    stepDelay: 0
+    stepDelay: 0.25
     attackRange: 0.25
     slashAngle: 0
     projectilePrefab: {fileID: 0}
@@ -45,4 +45,4 @@ MonoBehaviour:
   orbitRadius: 0.5
   orbitSpeed: 120
   travelDistance: 1
-  travelSpeed: 10
+  travelSpeed: 15

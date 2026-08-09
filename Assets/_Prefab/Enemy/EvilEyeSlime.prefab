@@ -72,6 +72,14 @@ PrefabInstance:
       propertyPath: m_Name
       value: EvilEyeSlime
       objectReference: {fileID: 0}
+    - target: {fileID: 3966190043329707056, guid: d7c6196ef90d05c40b420b83a4bc63ae, type: 3}
+      propertyPath: enemyData
+      value: 
+      objectReference: {fileID: 11400000, guid: 8ea2c33ab011ffd4e9126816a70684c5, type: 2}
+    - target: {fileID: 7669152264725958246, guid: d7c6196ef90d05c40b420b83a4bc63ae, type: 3}
+      propertyPath: separationRadius
+      value: 0.2
+      objectReference: {fileID: 0}
     - target: {fileID: 8355874129454218428, guid: d7c6196ef90d05c40b420b83a4bc63ae, type: 3}
       propertyPath: m_Animator
       value: 

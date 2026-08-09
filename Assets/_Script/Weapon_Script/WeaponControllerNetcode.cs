@@ -13,6 +13,9 @@ public class WeaponControllerNetcode : NetworkBehaviour
     [Header("Visuals")]
     public AoEIndicatorMesh aoeIndicator;
 
+    [Header("State")]
+    public bool isLobbyMode = false;
+
     [Header("Rendering")]
     public float orbitYMultiplier = 0.5f;
     private SpriteRenderer weaponSprite;
@@ -46,6 +49,11 @@ public class WeaponControllerNetcode : NetworkBehaviour
     private Coroutine aoeCoroutine;
 
     #region Unity Lifecycle
+    public void SetLobbyMode(bool isLobby)
+    {
+        isLobbyMode = isLobby;
+    }
+
     void Awake()
     {
         enemyFilter = new ContactFilter2D();
@@ -70,19 +78,21 @@ public class WeaponControllerNetcode : NetworkBehaviour
 
         if (aoeIndicator != null)
         {
-            aoeIndicator.transform.SetParent(null);
+            aoeIndicator.transform.SetParent(this.transform.root);
         }
     }
 
-    void Start()
+    public void EquipWeapon(WeaponDataSO newWeaponData)
     {
-        // 왜곡 방지: 무기를 플레이어의 자식에서 강제 분리
-        transform.SetParent(null);
+        weaponData = newWeaponData;
 
-        if (weaponData != null)
+        if (weaponData == null)
         {
-            transform.localScale = new Vector3(weaponData.weaponScale, weaponData.weaponScale, 1f);
+            Debug.LogWarning("무기 데이터가 없습니다!");
+            return;
         }
+
+        transform.localScale = new Vector3(weaponData.weaponScale, weaponData.weaponScale, 1f);
 
         if (playerTransform != null)
         {
@@ -92,7 +102,7 @@ public class WeaponControllerNetcode : NetworkBehaviour
         targetOrbitSpeed = weaponData.orbitSpeed;
         currentOrbitSpeed = weaponData.orbitSpeed;
 
-        if (weaponData != null && weaponData.weaponSprite != null)
+        if (weaponSprite != null && weaponData.weaponSprite != null)
         {
             weaponSprite.sprite = weaponData.weaponSprite;
         }
@@ -211,9 +221,10 @@ public class WeaponControllerNetcode : NetworkBehaviour
     #region Auto Attack System
     private void HandleAutoAttack()
     {
+        if (isLobbyMode) return;
+
         if (isAttacking || weaponData.actionSteps == null || weaponData.actionSteps.Length == 0) return;
 
-        // 공격 중이 아니면 쿨타임 차감
         autoAttackTimer -= Time.deltaTime;
 
         if (autoAttackTimer <= 0f && currentState == WeaponState.Orbiting)

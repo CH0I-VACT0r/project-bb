@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.UI;
 using UnityEngine.UIElements;
 
 public class PlayerHUDController : MonoBehaviour
@@ -54,8 +55,11 @@ public class PlayerHUDController : MonoBehaviour
         if (statManager.classData.identityUXML == null || identityContainer == null) return;
 
         identityContainer.Clear();
+        identityContainer.style.justifyContent = Justify.Center;
 
         VisualElement identityInstance = statManager.classData.identityUXML.Instantiate();
+        identityInstance.style.flexGrow = 0;
+        identityInstance.style.flexShrink = 0;
         identityContainer.Add(identityInstance);
 
         if (statManager.classData.className == "Barbarian")
@@ -73,13 +77,14 @@ public class PlayerHUDController : MonoBehaviour
     {
         if (localPlayerStats == null || hpOrbFluid == null || hpOrbText == null) return;
 
-        float current = localPlayerStats.CurrentHealth.Value;
+        // NetworkVariable 이벤트 콜백이 전달해 주는 최신 수치
+        float current = newValue;
         float max = localPlayerStats.MaxHealth.Value;
 
         // 퍼센트 계산 (0.0 ~ 100.0)
         float percent = Mathf.Clamp01(current / max) * 100f;
 
-        // fluid 요소의 높이를 퍼센트로 조절
+        hpOrbFluid.style.flexGrow = 0;
         hpOrbFluid.style.height = new Length(percent, LengthUnit.Percent);
 
         // 텍스트 업데이트
@@ -129,6 +134,11 @@ public class PlayerHUDController : MonoBehaviour
         if (barbarianUIController != null)
         {
             barbarianUIController.Unbind();
+        }
+
+        if (Instance == this)
+        {
+            Instance = null;
         }
     }
 }

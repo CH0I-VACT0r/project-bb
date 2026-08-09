@@ -32,7 +32,9 @@ public class EnemyStatManager : NetworkBehaviour, IDamageable
         {
             if (enemyData != null)
             {
-                currentHP.Value = enemyData.maxHP;
+                int playerCount = NetworkManager.Singleton.ConnectedClientsIds.Count;
+                float scaledMaxHP = enemyData.maxHP * playerCount; // 인원수에 비례하여 최대 체력을 정수 배로 증가
+                currentHP.Value = scaledMaxHP;
 
                 // 공격 스탯 캐싱
                 baseDamage = enemyData.baseDamage;

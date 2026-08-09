@@ -1,11 +1,15 @@
 using UnityEngine;
 using Unity.Netcode;
 using System;
+using UnityEngine.SceneManagement;
 
 public class PlayerStatManager : NetworkBehaviour, IDamageable
 {
     [Header("Class Setup")]
     public PlayerClassDataSO classData;
+
+    [Header("Weapon System")]
+    public WeaponControllerNetcode weaponController;
 
     [Header("1. Survival Stats")]
     public NetworkVariable<float> MaxHealth = new NetworkVariable<float>(100f);
@@ -84,6 +88,10 @@ public class PlayerStatManager : NetworkBehaviour, IDamageable
             {
                 Debug.LogError("PlayerHUDController 인스턴스를 찾을 수 없습니다.");
             }
+
+            InitializeClassWeapon();
+            AssignCameraTarget();
+            AssignPlayerUI();
         }
 
         if (IsServer)
@@ -160,6 +168,57 @@ public class PlayerStatManager : NetworkBehaviour, IDamageable
         }
     }
 
+    private void OnEnable()
+    {
+        SceneManager.sceneLoaded += OnSceneLoaded;
+    }
+
+    private void OnDisable()
+    {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
+    }
+
+    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        if (IsOwner && weaponController != null)
+        {
+            AssignCameraTarget();
+            AssignPlayerUI();
+
+            if (scene.name == "LobbyScene")
+            {
+                weaponController.SetLobbyMode(true);
+            }
+            else
+            {
+                weaponController.SetLobbyMode(false);
+            }
+        }
+    }
+
+    private void AssignCameraTarget()
+    {
+        if (Camera.main != null)
+        {
+            CameraFollow camFollow = Camera.main.GetComponent<CameraFollow>();
+            if (camFollow != null)
+            {
+                camFollow.target = this.transform;
+            }
+        }
+    }
+
+    private void AssignPlayerUI()
+    {
+        PlayerHUDController hud = FindFirstObjectByType<PlayerHUDController>();
+
+        if (hud != null)
+        {
+            // 수정: BindPlayer -> BindLocalPlayer (사용자님의 실제 함수명과 일치시킴)
+            hud.BindLocalPlayer(this);
+        }
+    }
+
     private void Update()
     {
         if (!IsServer) return;
@@ -181,6 +240,30 @@ public class PlayerStatManager : NetworkBehaviour, IDamageable
             {
                 CurrentShield.Value += 1f; // 쉴드 1회 복구
                 lastDamageTime = Time.time; // 다중 스택일 경우 다음 1스택 충전을 위해 시간 갱신
+            }
+        }
+    }
+
+    private void InitializeClassWeapon()
+    {
+        if (classData != null && classData.defaultWeapon != null)
+        {
+            if (weaponController != null)
+            {
+                weaponController.EquipWeapon(classData.defaultWeapon);
+
+                if (SceneManager.GetActiveScene().name == "LobbyScene")
+                {
+                    weaponController.SetLobbyMode(true);
+                }
+                else
+                {
+                    weaponController.SetLobbyMode(false);
+                }
+            }
+            else
+            {
+                Debug.LogError("PlayerStatManager에 weaponController 참조가 빠져있습니다!");
             }
         }
     }

@@ -1,6 +1,6 @@
 <ui:UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
-    <Style src="project://database/Assets/_Script/UI/Class_Identity/BarbarianIdentity.uss?fileID=7433441132597879392&amp;guid=391530c15bb559a41a7a3cf9e7bfa2cf&amp;type=3#BarbarianIdentity"/>
-    <ui:VisualElement name="barbarian-root" style="flex-grow: 1; flex-direction: column;">
+    <Style src="project://database/Assets/_Script/UI_Styles/Class_Identity/BarbarianIdentity.uss?fileID=7433441132597879392&amp;guid=391530c15bb559a41a7a3cf9e7bfa2cf&amp;type=3#BarbarianIdentity"/>
+    <ui:VisualElement name="barbarian-root" style="flex-grow: 0; flex-direction: column; align-items: stretch; align-content: auto; justify-content: center; flex-shrink: 0;">
         <ui:VisualElement name="barbarian-row" style="flex-grow: 0; flex-direction: row; flex-shrink: 0; justify-content: flex-start; align-content: center; align-self: auto;">
             <ui:VisualElement name="braincell-icon" class="barbarian-icon braincell-icon" style="flex-grow: 0; flex-shrink: 0;"/>
             <ui:ProgressBar value="10" title="0 / 100" name="braincell-bar" class="barbarian-bar braincell-color" style="height: auto; align-items: stretch; justify-content: center; align-content: center; -unity-text-outline-color: rgb(0, 0, 0); background-color: rgb(0, 0, 0);"/>

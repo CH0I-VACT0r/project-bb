@@ -190,7 +190,7 @@ GameObject:
   - component: {fileID: 7368562479316693354}
   - component: {fileID: 9079677853788415399}
   m_Layer: 0
-  m_Name: Weapon_Test
+  m_Name: Weapon
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -285,11 +285,12 @@ MonoBehaviour:
   ShowTopMostFoldoutHeaderGroup: 1
   playerStats: {fileID: 5867041930185482621}
   playerTransform: {fileID: 8121018516562590896}
-  weaponData: {fileID: 11400000, guid: f39674510b028924fa9833ce560fa983, type: 2}
+  weaponData: {fileID: 0}
   enemyLayer:
     serializedVersion: 2
     m_Bits: 128
   aoeIndicator: {fileID: 0}
+  isLobbyMode: 0
   orbitYMultiplier: 0.5
   networkAimDir:
     m_InternalValue: {x: 1, y: 0}
@@ -508,6 +509,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerStatManager
   ShowTopMostFoldoutHeaderGroup: 1
   classData: {fileID: 11400000, guid: c57b648740ff5f74cb8101885055d74d, type: 2}
+  weaponController: {fileID: 9079677853788415399}
   MaxHealth:
     m_InternalValue: 100
   CurrentHealth:

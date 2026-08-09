@@ -13,10 +13,10 @@
                 </ui:VisualElement>
             </ui:VisualElement>
             <ui:VisualElement name="center-section" class="center-section" style="flex-grow: 0; flex-shrink: 0;">
-                <ui:VisualElement name="identity-container" class="identity-container" style="flex-grow: 0; width: 100%; height: 80%; flex-shrink: 0;"/>
+                <ui:VisualElement name="identity-container" class="identity-container" style="flex-grow: 0; width: 100%; height: 80%; flex-shrink: 0; justify-content: center; background-color: rgba(255, 255, 255, 0);"/>
                 <ui:VisualElement name="class-level-container" class="class-level-container" style="flex-grow: 0; flex-direction: row; justify-content: space-between; flex-shrink: 0;">
-                    <ui:Label text="Class&#10;" name="Class" class="class-level-text"/>
-                    <ui:Label text="LV" name="Level" class="class-level-text"/>
+                    <ui:Label text="Class&#10;" name="Class" class="class-level-text" style="color: rgb(0, 0, 0);"/>
+                    <ui:Label text="LV" name="Level" class="class-level-text" style="color: rgb(0, 0, 0);"/>
                 </ui:VisualElement>
             </ui:VisualElement>
             <ui:VisualElement name="skill-section" class="skill-section" style="flex-grow: 0; flex-shrink: 0; justify-content: center;">

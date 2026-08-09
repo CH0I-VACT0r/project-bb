@@ -15,6 +15,9 @@ public class PlayerClassDataSO : ScriptableObject
     [Header("UI Toolkit (UXML)")]
     public VisualTreeAsset identityUXML;
 
+    [Header("Starting Equipment")]
+    public WeaponDataSO defaultWeapon;
+
     [Header("1. Survival & Defense")]
     public float maxHealth = 100f;
     public float healthRegen = 1.0f;
