@@ -32,29 +32,37 @@ public class EnemyStatManager : NetworkBehaviour, IDamageable
         {
             if (enemyData != null)
             {
-                int playerCount = NetworkManager.Singleton.ConnectedClientsIds.Count;
-                float scaledMaxHP = enemyData.maxHP * playerCount; // 인원수에 비례하여 최대 체력을 정수 배로 증가
-                currentHP.Value = scaledMaxHP;
-
-                // 공격 스탯 캐싱
-                baseDamage = enemyData.baseDamage;
-                accuracy = enemyData.accuracy;
-                penetration = (enemyData.attackAttribute == AttackAttribute.Physical) ? enemyData.physicalPenetration : enemyData.magicPenetration;
-
-                // 방어 스탯 캐싱 (오류 해결)
-                defense = enemyData.defense;
-                magicDefense = enemyData.magicDefense;
-                evasion = enemyData.evasion;
-
-                // StatusEffectManagerNetcode에 면역 플래그 전달
-                var statusManager = GetComponent<StatusEffectManagerNetcode>();
-                if (statusManager != null)
-                {
-                    // 아래 추가할 StatusEffectManagerNetcode의 변수에 접근
-                    statusManager.immuneElements = enemyData.immuneElements;
-                    statusManager.immuneCC = enemyData.immuneCC;
-                }
+                base.OnNetworkSpawn();
             }
+        }
+    }
+
+    public void ApplyScaling(int currentFloor, int playerCount)
+    {
+        if (!IsServer || enemyData == null) return;
+ 
+        float stageMultiplier = 1f + ((currentFloor - 1) * 0.05f); // 층별 스케일 배율 계산 (1층 = 1.0, 2층 = 1.05, 3층 = 1.10 ...)
+
+        // 체력 연산: 반올림(기본 체력 * 층 배율 * 플레이어 수)
+        float scaledMaxHP = Mathf.RoundToInt(enemyData.maxHP * stageMultiplier * playerCount);
+        currentHP.Value = scaledMaxHP;
+
+        // 공격력 연산: 반올림(기본 공격력 * 층 배율 * 플레이어 수)
+        baseDamage = Mathf.RoundToInt(enemyData.baseDamage * stageMultiplier);
+
+        // 기타 방어/명중 스탯 캐싱
+        accuracy = enemyData.accuracy;
+        penetration = (enemyData.attackAttribute == AttackAttribute.Physical) ? enemyData.physicalPenetration : enemyData.magicPenetration;
+        defense = enemyData.defense;
+        magicDefense = enemyData.magicDefense;
+        evasion = enemyData.evasion;
+
+        // 5. StatusEffectManagerNetcode에 면역 플래그 전달
+        var statusManager = GetComponent<StatusEffectManagerNetcode>();
+        if (statusManager != null)
+        {
+            statusManager.immuneElements = enemyData.immuneElements;
+            statusManager.immuneCC = enemyData.immuneCC;
         }
     }
 

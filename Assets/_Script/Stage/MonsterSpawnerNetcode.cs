@@ -83,8 +83,15 @@ public class MonsterSpawnerNetcode : NetworkBehaviour
 
         if (netObj != null)
         {
-            // true를 전달하면 씬이 전환되거나 종료될 때 이 몬스터도 자동으로 파괴(Despawn)됩니다.
             netObj.Spawn(true);
+            EnemyStatManager enemyStats = enemyInstance.GetComponent<EnemyStatManager>();
+            if (enemyStats != null)
+            {
+                int currentFloor = (GameManager.Instance != null) ? GameManager.Instance.currentFloor : 1;
+                int playerCount = NetworkManager.Singleton.ConnectedClientsIds.Count;
+
+                enemyStats.ApplyScaling(currentFloor, playerCount);
+            }
         }
         else
         {

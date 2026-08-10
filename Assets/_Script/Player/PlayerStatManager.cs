@@ -349,7 +349,35 @@ public class PlayerStatManager : NetworkBehaviour, IDamageable
 
     private void Die()
     {
-        Debug.Log("플레이어 사망!");
-        // TODO: 사망 연출, 게임 오버 처리 등
+        GetComponent<Collider2D>().enabled = false;            // 캐릭터 조작 및 충돌체 비활성화 (서버/클라이언트 공통)
+        GetComponent<PlayerMovementNetcode>().enabled = false; // 플레이어의 이동 비활성화
+
+        // 내 화면(로컬)의 카메라 타겟 변경 (관전 모드)
+        if (IsOwner)
+        {
+            SwitchCameraToSpectatorMode();
+        }
+    }
+
+    private void SwitchCameraToSpectatorMode()
+    {
+        if (Camera.main == null) return;
+        CameraFollow camFollow = Camera.main.GetComponent<CameraFollow>();
+        if (camFollow == null) return;
+
+        PlayerStatManager[] allPlayers = FindObjectsByType<PlayerStatManager>(FindObjectsSortMode.None);
+
+        foreach (var player in allPlayers)
+        {
+            if (player != this && player.CurrentHealth.Value > 0)
+            {
+                camFollow.target = player.transform;
+                Debug.Log($"{player.gameObject.name} 플레이어 관전 시작");
+                return;
+            }
+        }
+
+        Debug.Log("살아있는 다른 파티원이 없어 관전할 수 없습니다.");
+        // TODO: 파티 전멸 시 '실패(Game Over)' 로비 귀환 로직을 이 부분에 추가할 수 있습니다.
     }
 }
