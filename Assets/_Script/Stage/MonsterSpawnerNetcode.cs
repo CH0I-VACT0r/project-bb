@@ -9,10 +9,21 @@ public class MonsterSpawnerNetcode : NetworkBehaviour
     [Header("Spawn Settings")]
     public float spawnRadius = 15f; // 맵 중앙(또는 플레이어)으로부터 몬스터가 생성될 반경
 
+    [Header("Map Boundaries (Spawn)")]
+    public Vector2 spawnMinBounds; // 맵 경계 좌표
+    public Vector2 spawnMaxBounds;
+    public float minSafeDistance = 5f;
+
     private void Awake()
     {
         if (Instance == null) Instance = this;
         else Destroy(gameObject);
+    }
+
+    public void SetSpawnBounds(Vector2 min, Vector2 max)
+    {
+        spawnMinBounds = min;
+        spawnMaxBounds = max;
     }
 
     public void InitializeSpawner(StageDataSO data)
@@ -76,7 +87,20 @@ public class MonsterSpawnerNetcode : NetworkBehaviour
     {
         // 생성 위치 계산: 원점(0,0)을 기준으로 지정된 반경(Radius) 바깥의 임의의 위치
         Vector2 randomDir = Random.insideUnitCircle.normalized;
-        Vector3 spawnPos = new Vector3(randomDir.x, randomDir.y, 0) * spawnRadius;
+        Vector3 spawnPos = Vector3.zero;
+
+        // 맵 내부 랜덤 좌표를 구하되, 중앙(또는 플레이어)과 너무 가까우면 다시 뽑음 (최대 10번 시도)
+        for (int i = 0; i < 10; i++)
+        {
+            float randomX = Random.Range(spawnMinBounds.x, spawnMaxBounds.x);
+            float randomY = Random.Range(spawnMinBounds.y, spawnMaxBounds.y);
+            spawnPos = new Vector3(randomX, randomY, 0);
+
+            if (Vector3.Distance(Vector3.zero, spawnPos) > minSafeDistance)
+            {
+                break; // 안전 거리 확보 시 스폰 확정
+            }
+        }
 
         GameObject enemyInstance = Instantiate(prefab, spawnPos, Quaternion.identity);
         NetworkObject netObj = enemyInstance.GetComponent<NetworkObject>();
