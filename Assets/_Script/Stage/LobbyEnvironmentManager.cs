@@ -25,7 +25,7 @@ public class LobbyEnvironmentManager : NetworkBehaviour
             NetworkObject netObj = mapInstance.GetComponent<NetworkObject>();
             if (netObj != null)
             {
-                netObj.Spawn();
+                netObj.Spawn(true);
             }
         }
     }

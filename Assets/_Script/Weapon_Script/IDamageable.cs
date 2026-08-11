@@ -21,6 +21,7 @@ public struct DamageInfo : INetworkSerializable
     public float elementDotDamage;    // 시전자의 스탯에 비례해 계산된 도트 틱당 피해량
     public StatusEffectFlags directStatusEffects;
     public ulong attackerNetworkId;
+    public bool isDoTDamage;
 
     public void NetworkSerialize<T>(BufferSerializer<T> serializer) where T : IReaderWriter
     {

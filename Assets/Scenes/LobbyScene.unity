@@ -225,6 +225,27 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &221682397 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 3243686033961352905, guid: e6354287e78b0e14097147dc002cadd5, type: 3}
+  m_PrefabInstance: {fileID: 5044971368323204366}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &221682403
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 221682397}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 56666c5a40171f54783dd416a44f42bf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.EventSystems.Physics2DRaycaster
+  m_EventMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_MaxRayIntersections: 0
 --- !u!4 &325554129 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 2466018618295834540, guid: 0c668f799a7431447b0eaf3cbc06c624, type: 3}
@@ -287,7 +308,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LobbyEnvironmentManager
   ShowTopMostFoldoutHeaderGroup: 1
   lobbyMapPrefabs:
-  - {fileID: 1493550830176511718, guid: e91c03bccaf6f9d4c938a7d7e857dcc8, type: 3}
+  - {fileID: 70001937825838665, guid: 8481330e58d9b304e88e2b878054dc91, type: 3}
 --- !u!4 &504987218
 Transform:
   m_ObjectHideFlags: 0
@@ -1205,8 +1226,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: be23fc8edf843034497c2b2fb6bba966, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CursorManager
-  cursorTexture: {fileID: 2800000, guid: a5d055b511a205145b739006d596c8db, type: 3}
-  hotSpot: {x: 16, y: 16}
+  defaultCursor: {fileID: 2800000, guid: 047a4331f96653a468c8f2cd2d37b8da, type: 3}
+  defaultHotSpot: {x: 8, y: 8}
+  combatDefaultCursor: {fileID: 2800000, guid: c4972e3b57e9379428e074169a3ce83d, type: 3}
+  combatHotSpot: {x: 8, y: 8}
+  interactCursor: {fileID: 2800000, guid: 5499b99f65fcbed438f6620a84f0ecac, type: 3}
+  interactHotSpot: {x: 8, y: 8}
+  portalCursor: {fileID: 2800000, guid: 237968a14e02fe2408362990d98437aa, type: 3}
+  portalHotSpot: {x: 8, y: 8}
 --- !u!114 &1871009673
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1670,7 +1697,10 @@ PrefabInstance:
     - {fileID: 770133127492877018, guid: e6354287e78b0e14097147dc002cadd5, type: 3}
     - {fileID: 8271125641452758133, guid: e6354287e78b0e14097147dc002cadd5, type: 3}
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 3243686033961352905, guid: e6354287e78b0e14097147dc002cadd5, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 221682403}
   m_SourcePrefab: {fileID: 100100000, guid: e6354287e78b0e14097147dc002cadd5, type: 3}
 --- !u!1001 &5195708209429807695
 PrefabInstance:

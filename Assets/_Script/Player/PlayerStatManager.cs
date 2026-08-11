@@ -27,6 +27,10 @@ public class PlayerStatManager : NetworkBehaviour, IDamageable
     private float lastDamageTime;
     private float invincibilityEndTime = 0f;
 
+    [Header("Health Regeneration Settings")]
+    private float regenTimer = 0f;
+    private const float REGEN_INTERVAL = 10f; // 10초 주기 회복
+
     [Header("2. Combat Stats")]
     public NetworkVariable<float> AttackDamage = new NetworkVariable<float>(20f);
     public NetworkVariable<float> AbilityPower = new NetworkVariable<float>(0f);
@@ -203,7 +207,12 @@ public class PlayerStatManager : NetworkBehaviour, IDamageable
             CameraFollow camFollow = Camera.main.GetComponent<CameraFollow>();
             if (camFollow != null)
             {
-                camFollow.target = this.transform;
+                camFollow.SetTarget(this.transform, true);
+
+                if (SceneTransitionCurtain.Instance != null)
+                {
+                    SceneTransitionCurtain.Instance.FadeIn();
+                }
             }
         }
     }
@@ -222,15 +231,21 @@ public class PlayerStatManager : NetworkBehaviour, IDamageable
     private void Update()
     {
         if (!IsServer) return;
-        // 초당 재생 로직 (서버에서만 계산)
         RegenerateStats();
     }
 
     private void RegenerateStats()
     {
         // 체력 재생
-        if (CurrentHealth.Value < MaxHealth.Value)
-            CurrentHealth.Value = Mathf.Min(CurrentHealth.Value + HealthRegen.Value * Time.deltaTime, MaxHealth.Value);
+        if (CurrentHealth.Value > 0 && CurrentHealth.Value < MaxHealth.Value)
+        {
+            regenTimer += Time.deltaTime;
+            if (regenTimer >= REGEN_INTERVAL)
+            {
+                regenTimer = 0f;
+                CurrentHealth.Value = Mathf.Min(CurrentHealth.Value + HealthRegen.Value, MaxHealth.Value);
+            }
+        }
 
 
         // 쉴드 재생 (마지막 피격 후 일정 시간 경과 시)
@@ -292,32 +307,33 @@ public class PlayerStatManager : NetworkBehaviour, IDamageable
 
         lastDamageTime = Time.time;
 
-        // 2. 쉴드 연산 확인
+        // 쉴드 연산 확인
         if (CurrentShield.Value >= 1f)
         {
             CurrentShield.Value -= 1f;
             OnShieldBroken?.Invoke();
             GrantInvincibility(0.2f);
-            return; // 쉴드가 있으면 여기서 끝남 (체력 안 깎임)
+            return;
         }
-
         float finalDamage = info.damageAmount;
 
+        float targetDefense = 0f;
         if (info.attackType == AttackAttribute.Physical)
         {
-            float effectiveDefense = Mathf.Max(0f, Defense.Value - info.attackerPenetration);
-            finalDamage = Mathf.Max(1f, finalDamage - effectiveDefense);
+            targetDefense = Mathf.Max(0f, Defense.Value - info.attackerPenetration);
         }
         else if (info.attackType == AttackAttribute.Magic)
         {
-            float effectiveMagicDefense = Mathf.Max(0f, MagicDefense.Value - info.attackerPenetration);
-            finalDamage = Mathf.Max(1f, finalDamage - effectiveMagicDefense);
+            targetDefense = Mathf.Max(0f, MagicDefense.Value - info.attackerPenetration);
         }
 
-        // 3. 실제 체력 차감 확인
-        finalDamage = Mathf.Round(finalDamage);
-        CurrentHealth.Value -= finalDamage;
+        float defenseMultiplier = 100f / (100f + targetDefense);
+        finalDamage = finalDamage * defenseMultiplier;
 
+        finalDamage = Mathf.Round(finalDamage);
+        finalDamage = Mathf.Max(1f, finalDamage);
+
+        CurrentHealth.Value -= finalDamage;
         GrantInvincibility(0.2f);
 
         if (CurrentHealth.Value <= 0)

@@ -20,10 +20,12 @@ public class StageSelectionUI : MonoBehaviour
             return;
         }
 
-        // 3. 선택한 스테이지 번호를 GameManager에 저장 (전투 씬으로 가져감)
         GameManager.Instance.currentStageId = stageId;
+        GameManager.Instance.ResetDungeonProgress();
+        GameManager.Instance.currentFloor = 1; // 1층부터 시작하도록 명시적 고정
+        GameManager.Instance.nextRoomType = StageRoomType.Combat; // 첫 방은 무조건 일반 전투 방
 
-        // 4. 전투 씬으로 이동
+        // 5. 전투 씬으로 이동
         NetworkManager.Singleton.SceneManager.LoadScene("CombatScene", LoadSceneMode.Single);
     }
 }

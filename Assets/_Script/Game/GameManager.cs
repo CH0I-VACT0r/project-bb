@@ -67,4 +67,11 @@ public class GameManager : MonoBehaviour
     {
         return PlayerPrefs.GetInt($"Unlocked_EnhancedBoss_{stageId}", 0) == 1;
     }
+
+    public void ResetDungeonProgress()
+    {
+        currentFloor = 0; // 포탈 입장 시 currentFloor++ 가 호출되어 1층이 됨
+        nextRoomType = StageRoomType.Combat;
+        Debug.Log("[GameManager] 던전 진행도가 초기화되었습니다. (다음 입장 시 1층 Combat 방)");
+    }
 }

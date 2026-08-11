@@ -12,10 +12,35 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7770bed471c77294d9668a4e9c8c7816, type: 3}
   m_Name: Stage 1
   m_EditorClassIdentifier: Assembly-CSharp::StageDataSO
-  stageId: 1
-  mapPrefab: {fileID: 0}
-  normalEnemyPrefabs:
-  - {fileID: 8434304554716802035, guid: c8293e583571a3f46bc5ae6d1e906a72, type: 3}
-  bossPrefab: {fileID: 0}
-  waveCount: 3
-  timeBetweenWaves: 10
+  chapterId: 1
+  defaultCombatMap: {fileID: 4723274801600061357, guid: fc1719b2afd0eeb40b93296572af9b51, type: 3}
+  eliteCombatMap: {fileID: 7150940534475726152, guid: 5ea0b1e2f32bd714e85162edd5e529c6, type: 3}
+  bossCombatMap: {fileID: 1582343164426681833, guid: eb5f6cadb68c02c41afa29c5706a9d95, type: 3}
+  healRoomMap: {fileID: 8546966373152421952, guid: 345c48088eb3c7b40b212e39e6b1040f, type: 3}
+  shopRoomMap: {fileID: 7467311217070294515, guid: 9252851b64ec27547b52f846ac2a3098, type: 3}
+  defaultSpawnData:
+    targetFloor: 0
+    waves:
+    - spawnGroups:
+      - monsterPrefab: {fileID: 8434304554716802035, guid: c8293e583571a3f46bc5ae6d1e906a72, type: 3}
+        count: 15
+      - monsterPrefab: {fileID: 1011864096464343001, guid: d1c077b27f3f9644fb5368043671bac9, type: 3}
+        count: 10
+      timeToNextWave: 3
+  customFloorSpawnData:
+  - targetFloor: 1
+    waves:
+    - spawnGroups:
+      - monsterPrefab: {fileID: 8434304554716802035, guid: c8293e583571a3f46bc5ae6d1e906a72, type: 3}
+        count: 10
+      timeToNextWave: 5
+    - spawnGroups:
+      - monsterPrefab: {fileID: 8434304554716802035, guid: ca445a3d91f44394190a9fec796e67b1, type: 3}
+        count: 10
+      timeToNextWave: 0
+  - targetFloor: 0
+    waves: []
+  - targetFloor: 0
+    waves: []
+  - targetFloor: 0
+    waves: []

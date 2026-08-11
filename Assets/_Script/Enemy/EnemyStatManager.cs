@@ -20,7 +20,10 @@ public class EnemyStatManager : NetworkBehaviour, IDamageable
     private Rigidbody2D rb;
     public bool isStunned = false;
     private bool isDead = false;
-    
+
+    private float lastDotPopupTime = 0f;
+    private const float DOT_POPUP_INTERVAL = 0.4f;
+
     void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
@@ -47,7 +50,7 @@ public class EnemyStatManager : NetworkBehaviour, IDamageable
         float scaledMaxHP = Mathf.RoundToInt(enemyData.maxHP * stageMultiplier * playerCount);
         currentHP.Value = scaledMaxHP;
 
-        // 공격력 연산: 반올림(기본 공격력 * 층 배율 * 플레이어 수)
+        // 공격력 연산: 반올림(기본 공격력 * 층 배율)
         baseDamage = Mathf.RoundToInt(enemyData.baseDamage * stageMultiplier);
 
         // 기타 방어/명중 스탯 캐싱
@@ -78,20 +81,36 @@ public class EnemyStatManager : NetworkBehaviour, IDamageable
         }
 
         float finalDamage = info.damageAmount;
+        float targetDefense = 0f;
         if (info.attackType == AttackAttribute.Physical)
         {
-            float effectiveDefense = Mathf.Max(0f, defense - info.attackerPenetration);
-            finalDamage = Mathf.Max(1f, finalDamage - effectiveDefense);
+            targetDefense = Mathf.Max(0f, defense - info.attackerPenetration);
         }
         else if (info.attackType == AttackAttribute.Magic)
         {
-            float effectiveMagicDefense = Mathf.Max(0f, magicDefense - info.attackerPenetration);
-            finalDamage = Mathf.Max(1f, finalDamage - effectiveMagicDefense);
+            targetDefense = Mathf.Max(0f, magicDefense - info.attackerPenetration);
         }
+
+        float defenseMultiplier = 100f / (100f + targetDefense);
+        finalDamage = finalDamage * defenseMultiplier;
+
         finalDamage = Mathf.Round(finalDamage);
         finalDamage = Mathf.Max(1f, finalDamage);
+
         currentHP.Value -= finalDamage;
-        ShowDamagePopupClientRpc(finalDamage, transform.position, info.isCritical, false);
+
+        if (info.isDoTDamage)
+        {
+            if (Time.time - lastDotPopupTime >= DOT_POPUP_INTERVAL)
+            {
+                lastDotPopupTime = Time.time;
+                ShowDamagePopupClientRpc(finalDamage, transform.position, false, false);
+            }
+        }
+        else
+        {
+            ShowDamagePopupClientRpc(finalDamage, transform.position, info.isCritical, false);
+        }
 
         if (rb != null && info.knockbackForce > 0f)
         {
@@ -131,6 +150,16 @@ public class EnemyStatManager : NetworkBehaviour, IDamageable
     {
         if (isDead) return;
         isDead = true;
+        
+        if (IsServer)
+        {
+            MonsterSpawnerNetcode spawner = FindFirstObjectByType<MonsterSpawnerNetcode>();
+            if (spawner != null)
+            {
+                spawner.OnMonsterDead();
+            }
+        }
+
 
         EnemyAINetcode aiNetcode = GetComponent<EnemyAINetcode>();
         if (aiNetcode != null)

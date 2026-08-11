@@ -8,6 +8,8 @@ public class LobbyPortal : MonoBehaviour
 
     private void Start()
     {
+        EnsureUIReference();
+
         if (stageSelectionUI == null)
         {
             StageSelectionUI ui = FindFirstObjectByType<StageSelectionUI>(FindObjectsInactive.Include);
@@ -22,8 +24,21 @@ public class LobbyPortal : MonoBehaviour
         }
     }
 
+    private void EnsureUIReference()
+    {
+        if (stageSelectionUI == null)
+        {
+            StageSelectionUI ui = FindFirstObjectByType<StageSelectionUI>(FindObjectsInactive.Include);
+            if (ui != null)
+            {
+                stageSelectionUI = ui.gameObject;
+            }
+        }
+    }
+
     private void OnTriggerEnter2D(Collider2D collision)
     {
+        EnsureUIReference();
         if (collision.CompareTag("Player"))
         {
             NetworkObject netObj = collision.GetComponent<NetworkObject>();
@@ -36,6 +51,7 @@ public class LobbyPortal : MonoBehaviour
 
     private void OnTriggerExit2D(Collider2D collision)
     {
+        EnsureUIReference();
         if (collision.CompareTag("Player"))
         {
             NetworkObject netObj = collision.GetComponent<NetworkObject>();

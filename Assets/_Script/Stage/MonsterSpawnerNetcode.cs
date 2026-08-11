@@ -6,120 +6,162 @@ public class MonsterSpawnerNetcode : NetworkBehaviour
 {
     public static MonsterSpawnerNetcode Instance { get; private set; }
 
-    [Header("Spawn Settings")]
-    public float spawnRadius = 15f; // 맵 중앙(또는 플레이어)으로부터 몬스터가 생성될 반경
+    [Header("Spawn Bounds Settings")]
+    public float spawnCheckRadius = 0.5f;
+    public int maxSpawnAttempts = 10;
 
-    [Header("Map Boundaries (Spawn)")]
-    public Vector2 spawnMinBounds; // 맵 경계 좌표
-    public Vector2 spawnMaxBounds;
-    public float minSafeDistance = 5f;
+    private Bounds mapBounds;
+    private bool hasBounds = false;
+
+    private int totalSpawnedCount = 0;
+    private int totalDeadCount = 0;
 
     private void Awake()
     {
         if (Instance == null) Instance = this;
         else Destroy(gameObject);
     }
+    public override void OnDestroy()
+    {
+        if (Instance == this)
+        {
+            Instance = null;
+        }
+        base.OnDestroy();
+    }
+
+    public void SetSpawnBounds(Bounds bounds)
+    {
+        mapBounds = bounds;
+        hasBounds = true;
+    }
 
     public void SetSpawnBounds(Vector2 min, Vector2 max)
     {
-        spawnMinBounds = min;
-        spawnMaxBounds = max;
+        Vector3 center = new Vector3((min.x + max.x) * 0.5f, (min.y + max.y) * 0.5f, 0f);
+        Vector3 size = new Vector3(Mathf.Abs(max.x - min.x), Mathf.Abs(max.y - min.y), 10f);
+        mapBounds = new Bounds(center, size);
+        hasBounds = true;
     }
 
-    public void InitializeSpawner(StageDataSO data)
+    public void InitializeSpawner(StageDataSO stageData)
     {
-        if (!NetworkManager.Singleton.IsServer) return;
+        bool isServerAuthority = NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer;
+        Debug.Log($"[MonsterSpawner] InitializeSpawner 호출됨! (서버 권한: {isServerAuthority}, 데이터 존재: {stageData != null})");
 
-        // 데이터가 비정상적으로 들어왔을 경우를 대비한 안전 코드 추가
-        if (data == null)
+        if (!isServerAuthority || stageData == null) return;
+
+        int currentFloor = GameManager.Instance.currentFloor;
+        FloorSpawnData floorData = stageData.GetFloorData(currentFloor);
+
+        if (floorData.waves == null || floorData.waves.Length == 0)
         {
-            Debug.LogError("스포너에 전달된 StageDataSO가 비어있습니다!");
+            Debug.LogWarning($"[스포너] {currentFloor}층에 설정된 웨이브 데이터가 없습니다! 즉시 클리어 처리합니다.");
+            CombatStageManager.Instance.StageCleared();
             return;
         }
 
-        StartCoroutine(WaveRoutine(data));
-    }
+        totalDeadCount = 0;
+        totalSpawnedCount = 0;
 
-    private IEnumerator WaveRoutine(StageDataSO data)
-    {
-        // 웨이브 시작 전 초기 대기 시간 (로딩 및 플레이어 준비 시간)
-        yield return new WaitForSeconds(3f);
-
-        for (int wave = 1; wave <= data.waveCount; wave++)
+        foreach (var wave in floorData.waves)
         {
-            Debug.Log($"[서버] Wave {wave} 시작!");
-
-            // 웨이브당 생성할 몬스터 수 계산 (예: 웨이브 단계 * 5마리)
-            // 추후 StageDataSO에 배열을 추가해 웨이브마다 마릿수를 디테일하게 조절할 수 있습니다.
-            int enemiesToSpawn = wave * 5;
-
-            for (int i = 0; i < enemiesToSpawn; i++)
+            if (wave.spawnGroups != null)
             {
-                SpawnRandomEnemy(data);
-            }
-
-            // 다음 웨이브가 시작될 때까지 설정된 시간만큼 대기
-            yield return new WaitForSeconds(data.timeBetweenWaves);
-        }
-
-        // 모든 일반 웨이브 종료 후 보스 소환
-        Debug.Log("[서버] 보스 출현!");
-        SpawnBoss(data);
-    }
-
-    private void SpawnRandomEnemy(StageDataSO data)
-    {
-        if (data.normalEnemyPrefabs == null || data.normalEnemyPrefabs.Length == 0) return;
-
-        int randomIndex = Random.Range(0, data.normalEnemyPrefabs.Length);
-        GameObject prefabToSpawn = data.normalEnemyPrefabs[randomIndex];
-
-        ExecuteSpawn(prefabToSpawn);
-    }
-
-    private void SpawnBoss(StageDataSO data)
-    {
-        if (data.bossPrefab == null) return;
-        ExecuteSpawn(data.bossPrefab);
-    }
-
-    private void ExecuteSpawn(GameObject prefab)
-    {
-        // 생성 위치 계산: 원점(0,0)을 기준으로 지정된 반경(Radius) 바깥의 임의의 위치
-        Vector2 randomDir = Random.insideUnitCircle.normalized;
-        Vector3 spawnPos = Vector3.zero;
-
-        // 맵 내부 랜덤 좌표를 구하되, 중앙(또는 플레이어)과 너무 가까우면 다시 뽑음 (최대 10번 시도)
-        for (int i = 0; i < 10; i++)
-        {
-            float randomX = Random.Range(spawnMinBounds.x, spawnMaxBounds.x);
-            float randomY = Random.Range(spawnMinBounds.y, spawnMaxBounds.y);
-            spawnPos = new Vector3(randomX, randomY, 0);
-
-            if (Vector3.Distance(Vector3.zero, spawnPos) > minSafeDistance)
-            {
-                break; // 안전 거리 확보 시 스폰 확정
+                foreach (var group in wave.spawnGroups)
+                {
+                    totalSpawnedCount += group.count;
+                }
             }
         }
 
-        GameObject enemyInstance = Instantiate(prefab, spawnPos, Quaternion.identity);
-        NetworkObject netObj = enemyInstance.GetComponent<NetworkObject>();
-
-        if (netObj != null)
+        if (totalSpawnedCount == 0)
         {
-            netObj.Spawn(true);
-            EnemyStatManager enemyStats = enemyInstance.GetComponent<EnemyStatManager>();
-            if (enemyStats != null)
-            {
-                int currentFloor = (GameManager.Instance != null) ? GameManager.Instance.currentFloor : 1;
-                int playerCount = NetworkManager.Singleton.ConnectedClientsIds.Count;
+            Debug.LogWarning($"[스포너] {currentFloor}층의 웨이브는 존재하지만, 'Spawn Groups'의 Count가 0이거나 프리팹이 할당되지 않았습니다! StageDataSO 인스펙터를 확인하십시오.");
+            CombatStageManager.Instance.StageCleared();
+            return;
+        }
 
-                enemyStats.ApplyScaling(currentFloor, playerCount);
+        StartCoroutine(SpawnWaveRoutine(floorData));
+    }
+
+    private IEnumerator SpawnWaveRoutine(FloorSpawnData floorData)
+    {
+        for (int w = 0; w < floorData.waves.Length; w++)
+        {
+            WaveSpawnData currentWave = floorData.waves[w];
+
+            if (currentWave.spawnGroups != null)
+            {
+                // 각 그룹에 정의된 프리팹과 개수만큼 순서대로 스폰
+                foreach (var group in currentWave.spawnGroups)
+                {
+                    for (int i = 0; i < group.count; i++)
+                    {
+                        if (group.monsterPrefab != null)
+                        {
+                            Vector3 spawnPos = GetValidSpawnPosition();
+                            SpawnMonster(group.monsterPrefab, spawnPos);
+                        }
+                        yield return new WaitForSeconds(0.3f);
+                    }
+                }
+            }
+
+            if (w < floorData.waves.Length - 1)
+            {
+                yield return new WaitForSeconds(currentWave.timeToNextWave);
             }
         }
-        else
+    }
+
+    private void SpawnMonster(GameObject prefab, Vector3 position)
+    {
+        if (prefab == null) return;
+
+        GameObject mob = Instantiate(prefab, position, Quaternion.identity);
+
+        EnemyStatManager stat = mob.GetComponent<EnemyStatManager>();
+        if (stat != null)
         {
-            Debug.LogError($"{prefab.name} 프리팹에 NetworkObject 컴포넌트가 없습니다!");
+            int floor = GameManager.Instance.currentFloor;
+            int playerCount = NetworkManager.Singleton.ConnectedClientsIds.Count;
+            stat.ApplyScaling(floor, Mathf.Max(1, playerCount));
+        }
+
+        mob.GetComponent<NetworkObject>().Spawn();
+    }
+
+    private Vector3 GetValidSpawnPosition()
+    {
+        if (!hasBounds)
+            return new Vector3(Random.Range(-5f, 5f), Random.Range(-5f, 5f), 0);
+
+        for (int i = 0; i < maxSpawnAttempts; i++)
+        {
+            float rx = Random.Range(mapBounds.min.x, mapBounds.max.x);
+            float ry = Random.Range(mapBounds.min.y, mapBounds.max.y);
+            Vector2 targetPos = new Vector2(rx, ry);
+
+            if (Physics2D.OverlapCircle(targetPos, spawnCheckRadius) == null)
+            {
+                return targetPos;
+            }
+        }
+        return new Vector3(Random.Range(mapBounds.min.x, mapBounds.max.x), Random.Range(mapBounds.min.y, mapBounds.max.y), 0);
+    }
+
+    public void OnMonsterDead()
+    {
+        if (NetworkManager.Singleton == null || !NetworkManager.Singleton.IsServer) return;
+
+        totalDeadCount++;
+        Debug.Log($"[서버] 몬스터 처치: ({totalDeadCount} / {totalSpawnedCount})");
+
+        if (totalDeadCount >= totalSpawnedCount && totalSpawnedCount > 0)
+        {
+            Debug.Log("[서버] 방 클리어! 다음 층 포탈을 생성합니다.");
+            CombatStageManager.Instance.StageCleared();
         }
     }
 }

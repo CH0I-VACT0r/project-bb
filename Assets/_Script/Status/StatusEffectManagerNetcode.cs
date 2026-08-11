@@ -54,6 +54,8 @@ public class StatusEffectManagerNetcode : NetworkBehaviour
     public NetworkVariable<ulong> effectSourceId = new NetworkVariable<ulong>(0);
 
     private Coroutine fireDotCor, poisonDotCor, bleedDotCor;
+    private float fireEndTime = 0f;
+    private float poisonEndTime = 0f;
 
     void Awake()
     {
@@ -83,21 +85,32 @@ public class StatusEffectManagerNetcode : NetworkBehaviour
         if ((types & ElementFlags.Fire) != 0 && (immuneElements & ElementFlags.Fire) == 0)
         {
             curFire += finalAmount;
-            RefreshDoT(ref fireDotCor, FireDoTRoutine(baseDotDamage));
+            fireEndTime = Time.time + Mathf.Max(1f, 3f + bonusFireDuration);
+            if (fireDotCor == null)
+            {
+                fireDotCor = StartCoroutine(FireDoTRoutine(baseDotDamage));
+            }
             if (curFire >= maxFire) TriggerFireExplosion(baseDotDamage);
         }
 
         if ((types & ElementFlags.Poison) != 0 && (immuneElements & ElementFlags.Poison) == 0)
         {
             curPoison += finalAmount;
-            RefreshDoT(ref poisonDotCor, PoisonDoTRoutine(baseDotDamage));
+            poisonEndTime = Time.time + Mathf.Max(1f, 3f + bonusPoisonDuration);
+            if (poisonDotCor == null)
+            {
+                poisonDotCor = StartCoroutine(PoisonDoTRoutine(baseDotDamage));
+            }
             if (curPoison >= maxPoison) SetVulnerable(true, 5f);
         }
 
         if ((types & ElementFlags.Bleed) != 0 && (immuneElements & ElementFlags.Bleed) == 0)
         {
             curBleed += finalAmount;
-            RefreshDoT(ref bleedDotCor, BleedDoTRoutine(baseDotDamage));
+            if (bleedDotCor == null)
+            {
+                bleedDotCor = StartCoroutine(BleedDoTRoutine(baseDotDamage));
+            }
         }
 
         if ((types & ElementFlags.Frost) != 0 && (immuneElements & ElementFlags.Frost) == 0)
@@ -115,37 +128,29 @@ public class StatusEffectManagerNetcode : NetworkBehaviour
         }
     }
 
-    private void RefreshDoT(ref Coroutine dotCoroutine, IEnumerator newRoutine)
-    {
-        if (dotCoroutine != null) StopCoroutine(dotCoroutine);
-        dotCoroutine = StartCoroutine(newRoutine);
-    }
-
     #region DoT Routines (스탯 비례 연산 및 확장 변수 적용)
     private IEnumerator FireDoTRoutine(float baseDmg)
     {
-        int totalTicks = Mathf.Max(1, 3 + Mathf.FloorToInt(bonusFireDuration));
-
-        for (int i = 0; i < totalTicks; i++)
+        while (Time.time < fireEndTime && curFire > 0)
         {
             yield return new WaitForSeconds(1f);
             float finalDmg = baseDmg * (1f + (bonusFireDamage / 100f));
             ApplyDoTDamage(finalDmg, ElementFlags.Fire);
         }
         curFire = 0f;
+        fireDotCor = null; // 종료 후 참조 해제
     }
 
     private IEnumerator PoisonDoTRoutine(float baseDmg)
     {
-        int totalTicks = Mathf.Max(1, 3 + Mathf.FloorToInt(bonusPoisonDuration));
-
-        for (int i = 0; i < totalTicks; i++)
+        while (Time.time < poisonEndTime && curPoison > 0)
         {
             yield return new WaitForSeconds(1f);
             float finalDmg = baseDmg * (1f + (bonusPoisonDamage / 100f));
             ApplyDoTDamage(finalDmg, ElementFlags.Poison);
         }
         curPoison = 0f;
+        poisonDotCor = null;
     }
 
     private IEnumerator BleedDoTRoutine(float baseDmg)
@@ -156,6 +161,7 @@ public class StatusEffectManagerNetcode : NetworkBehaviour
 
             float bleedDmg = (baseDmg + (curBleed * 0.1f)) * (1f + (bonusBleedDamage / 100f));
             ApplyDoTDamage(bleedDmg, ElementFlags.Bleed);
+
             float finalDecayRate = Mathf.Max(0.01f, 0.20f - (bleedDecayReduction / 100f));
             float decayAmount = curBleed * finalDecayRate;
             curBleed -= decayAmount;
@@ -165,12 +171,18 @@ public class StatusEffectManagerNetcode : NetworkBehaviour
                 curBleed = 0f;
             }
         }
+        bleedDotCor = null;
     }
 
     private void ApplyDoTDamage(float dmg, ElementFlags element)
     {
         float resistedDmg = dmg * (1f - DotDamageResistancePct);
-        DamageInfo dotInfo = new DamageInfo { damageAmount = resistedDmg, elementTypes = element };
+        DamageInfo dotInfo = new DamageInfo
+        {
+            damageAmount = resistedDmg,
+            elementTypes = ElementFlags.None,
+            isDoTDamage = true
+        };
         if (statManager != null) statManager.TakeDamage(dotInfo);
     }
     #endregion
@@ -184,7 +196,8 @@ public class StatusEffectManagerNetcode : NetworkBehaviour
         DamageInfo explosionInfo = new DamageInfo
         {
             damageAmount = explosionDmg,
-            elementTypes = ElementFlags.Fire
+            elementTypes = ElementFlags.None, // 폭발 피해도 재귀 방지
+            isDoTDamage = false
         };
 
         if (statManager != null) statManager.TakeDamage(explosionInfo);

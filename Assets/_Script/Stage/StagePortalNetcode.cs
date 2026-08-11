@@ -1,49 +1,123 @@
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.InputSystem;
 
 public class StagePortalNetcode : NetworkBehaviour
 {
-    // 서버가 설정한 방의 성격이 모든 클라이언트에게 자동 동기화됩니다.
     public NetworkVariable<StageRoomType> roomType = new NetworkVariable<StageRoomType>();
+    public SpriteRenderer portalRenderer;
 
-    public SpriteRenderer portalRenderer; // 색상이나 이미지를 바꿀 렌더러
+    [Header("Interaction")]
+    public float interactRange = 2f;
+
+    [Header("Portal Sprites")]
+    public Sprite combatSprite; // 일반 몹 포탈 이미지
+    public Sprite eliteSprite;  // 엘리트 포탈 이미지
+    public Sprite healSprite;   // 회복 포탈 이미지
+    public Sprite shopSprite;   // 상점 포탈 이미지
+    public Sprite bossSprite;   // 보스 포탈 이미지
+
+    private Collider2D portalCollider;
+    private bool isHovered = false;
+
+    private void Awake()
+    {
+        portalCollider = GetComponent<Collider2D>();
+        if (portalCollider == null)
+        {
+            Debug.LogError($"[StagePortalNetcode] {gameObject.name}에 Collider2D가 없습니다! 프리팹 루트에 BoxCollider2D 등을 부착해야 합니다.");
+        }
+    }
 
     public override void OnNetworkSpawn()
     {
-        // 방 성격에 따라 문 색상 변경 (클라이언트 시각화)
         if (portalRenderer != null)
         {
             switch (roomType.Value)
             {
-                case StageRoomType.Combat: portalRenderer.color = Color.white; break;
-                case StageRoomType.Elite: portalRenderer.color = Color.red; break;
-                case StageRoomType.Heal: portalRenderer.color = Color.green; break;
-                case StageRoomType.Shop: portalRenderer.color = Color.yellow; break;
-                case StageRoomType.Boss: portalRenderer.color = Color.magenta; break;
+                case StageRoomType.Combat: portalRenderer.sprite = combatSprite; break;
+                case StageRoomType.Elite: portalRenderer.sprite = eliteSprite; break;
+                case StageRoomType.Heal: portalRenderer.sprite = healSprite; break;
+                case StageRoomType.Shop: portalRenderer.sprite = shopSprite; break;
+                case StageRoomType.Boss: portalRenderer.sprite = bossSprite; break;
             }
         }
     }
 
-    private void OnTriggerEnter2D(Collider2D collision)
+    private void Update()
     {
-        // 오직 서버(방장)의 연산에서만 씬 이동을 처리합니다.
-        if (!IsServer) return;
+        if (Camera.main == null || portalCollider == null || Mouse.current == null) return;
 
-        if (collision.CompareTag("Player"))
+        Vector2 screenPos = Mouse.current.position.ReadValue();
+        Vector2 mouseWorldPos = Camera.main.ScreenToWorldPoint(screenPos);
+        bool isMouseOver = portalCollider.OverlapPoint(mouseWorldPos);
+
+        if (isMouseOver && !isHovered)
         {
-            NetworkObject netObj = collision.GetComponent<NetworkObject>();
-            if (netObj != null && netObj.IsOwner)
+            isHovered = true;
+            if (CursorManager.Instance != null)
+                CursorManager.Instance.SetPortalCursor();
+        }
+        else if (!isMouseOver && isHovered)
+        {
+            isHovered = false;
+            if (CursorManager.Instance != null)
+                CursorManager.Instance.SetDefaultCursor();
+        }
+
+        if (isMouseOver && Mouse.current.leftButton.wasPressedThisFrame)
+        {
+            Debug.Log("[클라이언트] 포탈 클릭 감지됨 -> InteractPortalRpc 호출");
+            InteractPortalRpc();
+        }
+    }
+
+    private void OnDisable()
+    {
+        if (isHovered && CursorManager.Instance != null)
+        {
+            CursorManager.Instance.SetDefaultCursor();
+            isHovered = false;
+        }
+    }
+
+    [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
+    private void InteractPortalRpc(RpcParams rpcParams = default)
+    {
+        ulong senderId = rpcParams.Receive.SenderClientId;
+
+        if (NetworkManager.Singleton.ConnectedClients.TryGetValue(senderId, out NetworkClient client))
+        {
+            float distance = Vector2.Distance(client.PlayerObject.transform.position, transform.position);
+            if (distance > interactRange) return;
+
+            if (portalCollider != null) portalCollider.enabled = false;
+
+            if (SceneTransitionCurtain.Instance != null)
             {
-                Debug.Log($"{roomType.Value} 방으로 이동합니다!");
-
-                // 층수 증가 및 다음 방 성격 기록
-                GameManager.Instance.currentFloor++;
-                GameManager.Instance.nextRoomType = roomType.Value;
-
-                // 전투 씬 다시 로드 (씬이 다시 열리면서 nextRoomType에 맞는 맵/적을 세팅하게 됨)
-                NetworkManager.Singleton.SceneManager.LoadScene("CombatScene", LoadSceneMode.Single);
+                SceneTransitionCurtain.Instance.FadeOutAndCall(() => {
+                    ExecuteSceneLoadServer(roomType.Value);
+                });
             }
+            else
+            {
+                ExecuteSceneLoadServer(roomType.Value);
+            }
+        }
+    }
+
+    private void ExecuteSceneLoadServer(StageRoomType room)
+    {
+        if (CombatStageManager.Instance != null)
+        {
+            CombatStageManager.Instance.TransitionToNextStage(room);
+        }
+        else
+        {
+            GameManager.Instance.currentFloor++;
+            GameManager.Instance.nextRoomType = room;
+            NetworkManager.Singleton.SceneManager.LoadScene("CombatScene", LoadSceneMode.Single);
         }
     }
 }

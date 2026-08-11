@@ -10,6 +10,11 @@ public class WeaponControllerNetcode : NetworkBehaviour
     public WeaponDataSO weaponData;
     public LayerMask enemyLayer;
 
+    [Header("Aim Assist Settings")]
+    public float aimAssistRadius = 0.4f; // 커서 주변 적 탐지 반경
+    public float maxAssistAngle = 45f;   // 플레이어 조준 방향에서 허용되는 최대 보정 각도
+    public LayerMask enemyLayerMask;
+
     [Header("Visuals")]
     public AoEIndicatorMesh aoeIndicator;
 
@@ -136,7 +141,9 @@ public class WeaponControllerNetcode : NetworkBehaviour
             Vector3 mouseScreenPos = Mouse.current.position.ReadValue();
             Vector3 mousePos = Camera.main.ScreenToWorldPoint(mouseScreenPos);
             mousePos.z = 0;
-            Vector2 aimDir = (mousePos - playerTransform.position).normalized;
+
+            Vector3 assistedTargetPos = GetAssistedAimPosition(playerTransform.position, mousePos);
+            Vector2 aimDir = (assistedTargetPos - playerTransform.position).normalized;
 
             RequestAimUpdateServerRpc(aimDir);
             HandleAutoAttack();
@@ -521,6 +528,35 @@ public class WeaponControllerNetcode : NetworkBehaviour
         }
         if (weaponData.isBossPriority && nearestBoss != null) return nearestBoss;
         return nearestNormalEnemy;
+    }
+
+    // 공격 보정
+    public Vector3 GetAssistedAimPosition(Vector3 playerPos, Vector3 cursorWorldPos)
+    {
+        Vector3 aimDir = (cursorWorldPos - playerPos).normalized;
+
+        // 커서 주변 aimAssistRadius 반경 내의 모든 콜라이더 탐지
+        Collider2D[] hitEnemies = Physics2D.OverlapCircleAll(cursorWorldPos, aimAssistRadius);
+
+        Collider2D bestTarget = null;
+        float closestDistanceToCursor = float.MaxValue;
+
+        foreach (Collider2D col in hitEnemies)
+        {
+            if (!col.CompareTag("Enemy")) continue;
+
+            Vector3 toEnemy = (col.transform.position - playerPos).normalized;
+            float distToCursor = Vector2.Distance(cursorWorldPos, col.transform.position);
+
+            // 조준 방향과 적 위치 사이의 각도가 maxAssistAngle 이내인지 검사
+            float angle = Vector3.Angle(aimDir, toEnemy);
+            if (angle <= maxAssistAngle && distToCursor < closestDistanceToCursor)
+            {
+                closestDistanceToCursor = distToCursor;
+                bestTarget = col;
+            }
+        }
+        return bestTarget != null ? bestTarget.transform.position : cursorWorldPos;
     }
     #endregion
 
