@@ -118,6 +118,12 @@ public class MonsterSpawnerNetcode : NetworkBehaviour
     private void SpawnMonster(GameObject prefab, Vector3 position)
     {
         if (prefab == null) return;
+        EnemyStatManager statCheck = prefab.GetComponent<EnemyStatManager>();
+        if (statCheck == null)
+        {
+            Debug.LogError($"[MonsterSpawner] 잘못된 프리팹 스폰 시도! '{prefab.name}' 오브젝트에는 EnemyStatManager가 없습니다. StageDataSO 인스펙터에 투사체나 잘못된 프리팹이 연결되었는지 확인하십시오.");
+            return;
+        }
 
         GameObject mob = Instantiate(prefab, position, Quaternion.identity);
 
