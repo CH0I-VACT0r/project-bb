@@ -32,9 +32,20 @@ public class StagePortalNetcode : NetworkBehaviour
 
     public override void OnNetworkSpawn()
     {
+        UpdatePortalSprite(roomType.Value);
+        roomType.OnValueChanged += (oldVal, newVal) => UpdatePortalSprite(newVal);
+    }
+
+    public override void OnNetworkDespawn()
+    {
+        roomType.OnValueChanged -= (oldVal, newVal) => UpdatePortalSprite(newVal);
+    }
+
+    private void UpdatePortalSprite(StageRoomType type)
+    {
         if (portalRenderer != null)
         {
-            switch (roomType.Value)
+            switch (type)
             {
                 case StageRoomType.Combat: portalRenderer.sprite = combatSprite; break;
                 case StageRoomType.Elite: portalRenderer.sprite = eliteSprite; break;
@@ -94,30 +105,24 @@ public class StagePortalNetcode : NetworkBehaviour
 
             if (portalCollider != null) portalCollider.enabled = false;
 
-            if (SceneTransitionCurtain.Instance != null)
+            if (CombatStageManager.Instance != null)
             {
-                SceneTransitionCurtain.Instance.FadeOutAndCall(() => {
-                    ExecuteSceneLoadServer(roomType.Value);
-                });
-            }
-            else
-            {
-                ExecuteSceneLoadServer(roomType.Value);
+                CombatStageManager.Instance.TransitionToNextStage(roomType.Value);
             }
         }
     }
 
-    private void ExecuteSceneLoadServer(StageRoomType room)
-    {
-        if (CombatStageManager.Instance != null)
-        {
-            CombatStageManager.Instance.TransitionToNextStage(room);
-        }
-        else
-        {
-            GameManager.Instance.currentFloor++;
-            GameManager.Instance.nextRoomType = room;
-            NetworkManager.Singleton.SceneManager.LoadScene("CombatScene", LoadSceneMode.Single);
-        }
-    }
+    //private void ExecuteSceneLoadServer(StageRoomType room)
+    //{
+    //    if (CombatStageManager.Instance != null)
+    //    {
+    //        CombatStageManager.Instance.TransitionToNextStage(room);
+    //    }
+    //    else
+    //    {
+    //        GameManager.Instance.currentFloor++;
+    //        GameManager.Instance.nextRoomType = room;
+    //        NetworkManager.Singleton.SceneManager.LoadScene("CombatScene", LoadSceneMode.Single);
+    //    }
+    //}
 }

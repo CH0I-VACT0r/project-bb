@@ -24,9 +24,10 @@ MonoBehaviour:
     - spawnGroups:
       - monsterPrefab: {fileID: 8434304554716802035, guid: c8293e583571a3f46bc5ae6d1e906a72, type: 3}
         count: 15
-      - monsterPrefab: {fileID: 1011864096464343001, guid: d1c077b27f3f9644fb5368043671bac9, type: 3}
+      - monsterPrefab: {fileID: 8434304554716802035, guid: ca445a3d91f44394190a9fec796e67b1, type: 3}
         count: 10
       timeToNextWave: 3
+  additionalMonstersPerStageStep: 3
   customFloorSpawnData:
   - targetFloor: 1
     waves:

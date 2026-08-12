@@ -106,7 +106,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 3205672514
+  GlobalObjectIdHash: 351181494
   InScenePlacedSourceGlobalObjectIdHash: 0
   DeferredDespawnTick: 0
   Ownership: 1
@@ -138,8 +138,8 @@ MonoBehaviour:
   interactRange: 2
   combatSprite: {fileID: 6653487363146659802, guid: 8799c962d4a4eb741856388c667a161c, type: 3}
   eliteSprite: {fileID: -606702570, guid: 8799c962d4a4eb741856388c667a161c, type: 3}
-  healSprite: {fileID: 848637060, guid: 8799c962d4a4eb741856388c667a161c, type: 3}
-  shopSprite: {fileID: -606702570, guid: 8799c962d4a4eb741856388c667a161c, type: 3}
+  healSprite: {fileID: 317267419, guid: 8799c962d4a4eb741856388c667a161c, type: 3}
+  shopSprite: {fileID: 848637060, guid: 8799c962d4a4eb741856388c667a161c, type: 3}
   bossSprite: {fileID: -466068280, guid: 8799c962d4a4eb741856388c667a161c, type: 3}
 --- !u!61 &7673707900378757161
 BoxCollider2D:

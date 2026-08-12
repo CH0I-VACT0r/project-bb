@@ -255,16 +255,13 @@ public class WeaponControllerNetcode : NetworkBehaviour
             Vector3 direction = networkAimDir.Value;
             WeaponActionStep currentStep = weaponData.actionSteps[i];
 
-            // AoE(근접 범위) 판정 여부만 계산
             bool isAoEAttack = (currentStep.actionTypes & (WeaponTypeFlags.Melee | WeaponTypeFlags.Slash | WeaponTypeFlags.Laser | WeaponTypeFlags.Single)) != 0;
 
-            // 고정 사거리 대신, 궤도 안쪽의 적까지 탐지하는 동적 타겟팅 적용
             Vector3 targetPos = CalculateVisualTargetPosition(direction);
-
-            // 근접/원거리 구분 없이 무조건 무기를 전진시키고, 메쉬(isAoEAttack) 여부만 매개변수로 전달
             PlayAttackVisualLocal(direction, targetPos, currentComboIndex, isAoEAttack);
 
-            RequestComboAttackServerRpc(currentComboIndex, direction);
+            RequestComboAttackServerRpc(currentComboIndex, direction, targetPos);
+
             yield return new WaitForSeconds(currentStep.stepDelay);
         }
 
@@ -327,14 +324,12 @@ public class WeaponControllerNetcode : NetworkBehaviour
     }
 
     [ServerRpc]
-    private void RequestComboAttackServerRpc(int comboIndex, Vector3 direction)
+    private void RequestComboAttackServerRpc(int comboIndex, Vector3 direction, Vector3 attackOrigin)
     {
         if (comboIndex < 0 || comboIndex >= weaponData.actionSteps.Length) return;
-        WeaponActionStep step = weaponData.actionSteps[comboIndex];
-        float totalReach = weaponData.orbitRadius + weaponData.travelDistance;
-        Vector3 logicalAttackOrigin = playerTransform.position + (direction * totalReach);
 
-        ExecuteStepActionServer(step, direction, logicalAttackOrigin);
+        WeaponActionStep step = weaponData.actionSteps[comboIndex];
+        ExecuteStepActionServer(step, direction, attackOrigin);
     }
     #endregion
 
@@ -410,8 +405,13 @@ public class WeaponControllerNetcode : NetworkBehaviour
 
                     if (isSlash)
                     {
-                        float angleToEnemy = Vector2.Angle(direction, dirToEnemy);
-                        if (angleToEnemy > step.slashAngle / 2f) continue;
+                        //타격 원점에 가까이 있는 적은 벡터 계산 시 오류가 나므로 각도 검사를 생략
+                        float distToCenter = Vector2.Distance(attackOrigin, hitBuffer[i].transform.position);
+                        if (distToCenter > 0.1f)
+                        {
+                            float angleToEnemy = Vector2.Angle(direction, dirToEnemy);
+                            if (angleToEnemy > step.slashAngle / 2f) continue;
+                        }
                     }
 
                     DamageInfo info = CreateBaseDamageInfo(finalDamage, dirToEnemy, step.knockbackForce);
@@ -533,29 +533,32 @@ public class WeaponControllerNetcode : NetworkBehaviour
     // 공격 보정
     public Vector3 GetAssistedAimPosition(Vector3 playerPos, Vector3 cursorWorldPos)
     {
-        Vector3 aimDir = (cursorWorldPos - playerPos).normalized;
+        if (weaponData == null) return cursorWorldPos;
+       
+        Vector3 mouseDir = (cursorWorldPos - playerPos).normalized; // 마우스가 가리키는 원본 방향
+        float maxReach = weaponData.orbitRadius + weaponData.travelDistance; // 무기의 최대 타격 사거리 (궤도 반지름 + 전진 거리)
 
-        // 커서 주변 aimAssistRadius 반경 내의 모든 콜라이더 탐지
-        Collider2D[] hitEnemies = Physics2D.OverlapCircleAll(cursorWorldPos, aimAssistRadius);
-
+        Collider2D[] hitEnemies = Physics2D.OverlapCircleAll(playerPos, maxReach, enemyLayerMask);
         Collider2D bestTarget = null;
-        float closestDistanceToCursor = float.MaxValue;
+        float closestDistanceToPlayer = float.MaxValue;
 
         foreach (Collider2D col in hitEnemies)
         {
             if (!col.CompareTag("Enemy")) continue;
 
             Vector3 toEnemy = (col.transform.position - playerPos).normalized;
-            float distToCursor = Vector2.Distance(cursorWorldPos, col.transform.position);
+            float distToPlayer = Vector2.Distance(playerPos, col.transform.position);
 
-            // 조준 방향과 적 위치 사이의 각도가 maxAssistAngle 이내인지 검사
-            float angle = Vector3.Angle(aimDir, toEnemy);
-            if (angle <= maxAssistAngle && distToCursor < closestDistanceToCursor)
+            // 마우스 방향 기준 좌우 45도 이내에 있는 적 필터링
+            float angle = Vector3.Angle(mouseDir, toEnemy);
+            if (angle <= 45f && distToPlayer < closestDistanceToPlayer)
             {
-                closestDistanceToCursor = distToCursor;
+                closestDistanceToPlayer = distToPlayer;
                 bestTarget = col;
             }
         }
+
+        // 조건에 맞는 가장 가까운 적이 있다면 그 적의 중심 좌표로 조준선을 스냅(Snap), 없으면 원본 유지
         return bestTarget != null ? bestTarget.transform.position : cursorWorldPos;
     }
     #endregion

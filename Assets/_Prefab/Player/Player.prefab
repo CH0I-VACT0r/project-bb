@@ -289,6 +289,11 @@ MonoBehaviour:
   enemyLayer:
     serializedVersion: 2
     m_Bits: 128
+  aimAssistRadius: 1.5
+  maxAssistAngle: 45
+  enemyLayerMask:
+    serializedVersion: 2
+    m_Bits: 128
   aoeIndicator: {fileID: 0}
   isLobbyMode: 0
   orbitYMultiplier: 0.5

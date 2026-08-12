@@ -1,38 +1,59 @@
 using Unity.Netcode;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class HealStatueNetcode : NetworkBehaviour
 {
     public NetworkVariable<bool> isUsed = new NetworkVariable<bool>(false);
+    private Collider2D statCollider;
+    private bool isHovered = false;
 
     [Header("Interaction")]
     public float interactRange = 3f;
 
-    private void OnMouseEnter()
+    private void Awake()
     {
-        if (!isUsed.Value && CursorManager.Instance != null)
-        {
-            CursorManager.Instance.SetInteractCursor();
-        }
+        statCollider = GetComponent<Collider2D>();
     }
 
-    private void OnMouseExit()
+    private void Update()
     {
-        if (CursorManager.Instance != null)
-        {
-            CursorManager.Instance.SetDefaultCursor();
-        }
-    }
+        if (!IsSpawned) return;
+        if (Camera.main == null || statCollider == null || Mouse.current == null) return;
 
-    private void OnMouseDown()
-    {
-        if (!isUsed.Value)
+        Vector2 screenPos = Mouse.current.position.ReadValue();
+        Vector2 mouseWorldPos = Camera.main.ScreenToWorldPoint(screenPos);
+
+        bool isMouseOver = statCollider.OverlapPoint(mouseWorldPos);
+
+        if (isMouseOver && !isUsed.Value && !isHovered)
+        {
+            isHovered = true;
+            if (CursorManager.Instance != null)
+                CursorManager.Instance.SetInteractCursor(); // 포탈과 다른 일반 상호작용 커서
+        }
+        else if ((!isMouseOver || isUsed.Value) && isHovered)
+        {
+            isHovered = false;
+            if (CursorManager.Instance != null)
+                CursorManager.Instance.SetDefaultCursor();
+        }
+
+        if (isMouseOver && !isUsed.Value && Mouse.current.leftButton.wasPressedThisFrame)
         {
             InteractStatueRpc();
         }
     }
 
-    // ★ 수정: 최신 Rpc 어트리뷰트 적용
+    private void OnDisable()
+    {
+        if (isHovered && CursorManager.Instance != null)
+        {
+            CursorManager.Instance.SetDefaultCursor();
+            isHovered = false;
+        }
+    }
+
     [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
     private void InteractStatueRpc(RpcParams rpcParams = default)
     {
@@ -72,14 +93,21 @@ public class HealStatueNetcode : NetworkBehaviour
             }
         }
         UpdateStatueVisualClientRpc();
+
+        if (CombatStageManager.Instance != null)
+        {
+            CombatStageManager.Instance.StageCleared();
+        }
     }
 
-    [Rpc(SendTo.ClientsAndHost)] // (선택) 최신 NGO에서는 ClientRpc 대신 사용 가능하나, 기존 ClientRpc를 써도 무방합니다.
+    [Rpc(SendTo.ClientsAndHost)]
     private void UpdateStatueVisualClientRpc()
     {
-        if (CursorManager.Instance != null)
+        // 상호작용이 끝나면 켜져있던 커서를 즉시 기본 상태로 되돌림
+        if (isHovered && CursorManager.Instance != null)
         {
             CursorManager.Instance.SetDefaultCursor();
+            isHovered = false;
         }
 
         SpriteRenderer sr = GetComponent<SpriteRenderer>();

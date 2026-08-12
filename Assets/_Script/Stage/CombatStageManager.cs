@@ -181,12 +181,27 @@ public class CombatStageManager : NetworkBehaviour
             autoTransitionCoroutine = null;
         }
 
-        Debug.Log($"[서버] 다음 층({GameManager.Instance.currentFloor + 1}층 - {roomType})으로 씬 전환을 수행합니다.");
+        StartCoroutine(TransitionWithFadeRoutine(roomType));
+    }
 
+    private IEnumerator TransitionWithFadeRoutine(StageRoomType roomType)
+    {
+        
+        TriggerFadeOutClientRpc(); // 접속 중인 모든 플레이어에게 화면을 검게 칠하라고 RPC 명령
+
+        yield return new WaitForSeconds(0.3f);
         GameManager.Instance.currentFloor++;
         GameManager.Instance.nextRoomType = roomType;
-
         NetworkManager.Singleton.SceneManager.LoadScene("CombatScene", LoadSceneMode.Single);
+    }
+
+    [ClientRpc]
+    private void TriggerFadeOutClientRpc()
+    {
+        if (SceneTransitionCurtain.Instance != null)
+        {
+            SceneTransitionCurtain.Instance.FadeOutAndCall(null);
+        }
     }
 
     private void SpawnNextStagePortals()
@@ -216,14 +231,15 @@ public class CombatStageManager : NetworkBehaviour
     {
         GameObject portalInstance = Instantiate(portalPrefab, position, Quaternion.identity);
         StagePortalNetcode portalScript = portalInstance.GetComponent<StagePortalNetcode>();
-        if (portalScript != null)
-        {
-            portalScript.roomType.Value = type;
-        }
         NetworkObject netObj = portalInstance.GetComponent<NetworkObject>();
         if (netObj != null)
         {
             netObj.Spawn(true);
         }
+        if (portalScript != null)
+        {
+            portalScript.roomType.Value = type;
+        }
+       
     }
 }

@@ -15,6 +15,7 @@ public class SceneTransitionCurtain : MonoBehaviour
         if (Instance == null)
         {
             Instance = this;
+            transform.SetParent(null);
             DontDestroyOnLoad(gameObject);
             SetupDefaultCurtain();
         }
