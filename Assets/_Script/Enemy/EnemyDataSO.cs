@@ -35,11 +35,13 @@ public class EnemyDataSO : ScriptableObject
     [Header("Attack Type")]
     public EnemyAttackType attackType;
 
+    [Header("Attack Config (공통)")]
+    public float attackRange = 7f;        // 공격 및 특수 패턴(돌진 등) 발동 거리
+    public float attackCooldown = 2f;     // 공격(패턴) 쿨타임
+
     [Header("Ranged Attack Config (원거리 전용)")]
-    public float attackRange = 7f;        // 공격 사거리 (이 거리 안으로 들어오면 멈춤)
-    public float attackCooldown = 2f;     // 발사 간격 (초)
-    public float projectileSpeed = 10f;   // 투사체 날아가는 속도
-    public int projectileCount = 1;       // 한 번에 발사할 투사체 개수 (샷건 모드)
-    public float spreadAngle = 15f;       // 다중 발사 시 투사체 간의 벌어지는 각도
+    public float projectileSpeed = 10f;   // 투사체 속도
+    public int projectileCount = 1;       // 다중 발사 개수
+    public float spreadAngle = 15f;       // 확산 각도
     public GameObject projectilePrefab;
 }

@@ -20,7 +20,7 @@ public class EnemyAINetcode : NetworkBehaviour
     [HideInInspector]
     public bool canAutoAttack = true;
 
-    [Header("Separation Settings (°ãÄ§ ¹æÁö)")]
+    [Header("Separation Settings (ê²¹ì¹¨ ë°©ì§€)")]
     public float separationRadius = 0.8f;
     public float separationWeight = 1.0f;
     public LayerMask enemyLayer;
@@ -31,13 +31,13 @@ public class EnemyAINetcode : NetworkBehaviour
     public float attackWindupTime = 0.2f;
     public float deathAnimationDuration = 0.5f;
 
-    // ¿ø°Å¸® °ø°İ ÄğÅ¸ÀÓ ÃßÀû¿ë
+    // ì›ê±°ë¦¬ ê³µê²© ì¿¨íƒ€ì„ ì¶”ì ìš©
     private float lastAttackTime = 0f;
     private bool isAttacking = false;
     private bool isDead = false;
 
     [Header("Special Pattern (Optional)")]
-    public BossPatternBase specialAttackPattern; // ÀÏ¹İ ¸÷µµ µ¿ÀÏÇÑ ¸ğµâ »ç¿ë
+    public BossPatternBase specialAttackPattern; // ì¼ë°˜ ëª¹ë„ ë™ì¼í•œ ëª¨ë“ˆ ì‚¬ìš©
     private bool isExecutingSpecialPattern = false;
 
     private void Awake()
@@ -47,6 +47,12 @@ public class EnemyAINetcode : NetworkBehaviour
         statusManager = GetComponent<StatusEffectManagerNetcode>();
         visualNetcode = GetComponent<EnemyVisualNetcode>();
 
+        // Inspectorì—ì„œ ìˆ˜ë™ í• ë‹¹ì´ ì•ˆ ë˜ì–´ ìˆìœ¼ë©´, ê°™ì€ ì˜¤ë¸Œì íŠ¸ì—ì„œ ìë™ íƒìƒ‰
+        if (specialAttackPattern == null)
+        {
+            specialAttackPattern = GetComponent<BossPatternBase>();
+        }
+
         separationFilter.useLayerMask = true;
         separationFilter.layerMask = enemyLayer;
         separationFilter.useTriggers = true;
@@ -54,7 +60,7 @@ public class EnemyAINetcode : NetworkBehaviour
 
     private void Update()
     {
-        // ¼­¹ö°¡ ¾Æ´Ï°Å³ª, Á×¾ú°Å³ª, ÀÌ¹Ì °ø°İ ÁßÀÌ¸é Update ¿¬»ê ÁßÁö
+        // ì„œë²„ê°€ ì•„ë‹ˆê±°ë‚˜, ì£½ì—ˆê±°ë‚˜, ì´ë¯¸ ê³µê²© ì¤‘ì´ë©´ Update ì—°ì‚° ì¤‘ì§€
         if (!IsServer || isDead || isAttacking) return;
 
         searchTimer -= Time.deltaTime;
@@ -64,39 +70,39 @@ public class EnemyAINetcode : NetworkBehaviour
             searchTimer = searchInterval;
         }
 
-        // --- °ø°İ ÆÇÁ¤ ·ÎÁ÷ ---
+        // --- ê³µê²© íŒì • ë¡œì§ ---
         if (canAutoAttack && targetPlayer != null && !statManager.isStunned && !isExecutingSpecialPattern)
         {
             float dist = Vector2.Distance(transform.position, targetPlayer.position);
             var data = statManager.enemyData;
 
-            // Æ¯¼ö ÆĞÅÏ(µ¹Áø, ÀåÆÇ)ÀÌ ºÎÂøµÇ¾î ÀÖ°í, »ç°Å¸® ³»¿¡ µé¾î¿ÔÀ» °æ¿ì
-            if (specialAttackPattern != null && dist <= data.attackRange)
+            if (dist <= data.attackRange)
             {
+                // ì¿¨íƒ€ì„ ì²´í¬ (íŠ¹ìˆ˜ íŒ¨í„´ê³¼ í‰íƒ€ ëª¨ë‘ ë™ì¼í•œ ì¿¨íƒ€ì„ ì‚¬ìš©)
                 if (Time.time - lastAttackTime >= data.attackCooldown)
                 {
-                    isExecutingSpecialPattern = true;
-                    rb.linearVelocity = Vector2.zero; // ÀÌµ¿ Á¤Áö
-
-                    // Æ¯¼ö ÆĞÅÏ ½ÇÇà (Á¾·á ½Ã ¶÷´Ù½ÄÀ¸·Î ´Ù½Ã AI È°¼ºÈ­)
-                    specialAttackPattern.ExecutePattern(targetPlayer, () =>
+                    if (specialAttackPattern != null)
                     {
-                        isExecutingSpecialPattern = false;
-                        lastAttackTime = Time.time;
-                    });
-                }
-            }
-            // Æ¯¼ö ÆĞÅÏÀÌ ¾ø´Â ÀÏ¹İ ¿ø°Å¸®/±ÙÁ¢ ¸÷ÀÏ °æ¿ì ±âÁ¸ ·ÎÁ÷ ½ÇÇà
-            else if (specialAttackPattern == null && dist <= data.attackRange)
-            {
-                if (Time.time - lastAttackTime >= data.attackCooldown)
-                {
-                    if (data.attackType == EnemyAttackType.Projectile)
-                        StartCoroutine(RangedAttackRoutine(data, targetPlayer.position));
-                    else if (data.attackType == EnemyAttackType.Melee)
-                        StartCoroutine(MeleeAttackRoutine());
+                        // íŠ¹ìˆ˜ íŒ¨í„´(ëŒ€ì‰¬, ì¥íŒ ë“±) ì‹¤í–‰
+                        isExecutingSpecialPattern = true;
+                        rb.linearVelocity = Vector2.zero;
 
-                    lastAttackTime = Time.time;
+                        specialAttackPattern.ExecutePattern(targetPlayer, () =>
+                        {
+                            isExecutingSpecialPattern = false;
+                            lastAttackTime = Time.time;
+                        });
+                    }
+                    else
+                    {
+                        // íŠ¹ìˆ˜ íŒ¨í„´ì´ ì—†ëŠ” ì¼ë°˜ ëª¹ í‰íƒ€ ì‹¤í–‰
+                        if (data.attackType == EnemyAttackType.Projectile)
+                            StartCoroutine(RangedAttackRoutine(data, targetPlayer.position));
+                        else if (data.attackType == EnemyAttackType.Melee)
+                            StartCoroutine(MeleeAttackRoutine());
+
+                        lastAttackTime = Time.time;
+                    }
                 }
             }
         }
@@ -110,7 +116,12 @@ public class EnemyAINetcode : NetworkBehaviour
             return;
         }
 
-        // ±âÀı ½Ã ¿ÏÀü Á¤Áö
+        if (isExecutingSpecialPattern)
+        {
+            return;
+        }
+
+        // ê¸°ì ˆ ì‹œ ì™„ì „ ì •ì§€
         if (statusManager != null && statusManager.isStunned.Value)
         {
             rb.linearVelocity = Vector2.zero;
@@ -121,7 +132,7 @@ public class EnemyAINetcode : NetworkBehaviour
         bool hasValidTarget = false;
         var data = statManager.enemyData;
 
-        // µµ¹ß / °øÆ÷
+        // ë„ë°œ / ê³µí¬
         if (statusManager != null && (statusManager.isTaunted.Value || statusManager.isFeared.Value) && statusManager.effectSourceId.Value != 0)
         {
             if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(statusManager.effectSourceId.Value, out NetworkObject sourceObj))
@@ -144,7 +155,7 @@ public class EnemyAINetcode : NetworkBehaviour
             hasValidTarget = true;
         }
 
-        // Å¸°ÙÀÌ ÀÖÀ» ¶§ÀÇ ÀÌµ¿ ¿¬»ê
+        // íƒ€ê²Ÿì´ ìˆì„ ë•Œì˜ ì´ë™ ì—°ì‚°
         if (hasValidTarget)
         {
             float distToTarget = Vector2.Distance(transform.position, targetPos);
@@ -206,22 +217,22 @@ public class EnemyAINetcode : NetworkBehaviour
         }
         return repulsionForce.normalized;
     }
-    // --- °ø°İ ÄÚ·çÆ¾ ·ÎÁ÷ ---
+    // --- ê³µê²© ì½”ë£¨í‹´ ë¡œì§ ---
     private IEnumerator RangedAttackRoutine(EnemyDataSO data, Vector2 targetPosition)
     {
         isAttacking = true;
-        visualNetcode.TriggerAttackAnimation(); // °ø°İ ¾Ö´Ï¸ŞÀÌ¼Ç ½ÃÀÛ
+        visualNetcode.TriggerAttackAnimation(); // ê³µê²© ì• ë‹ˆë©”ì´ì…˜ ì‹œì‘
 
-        // ¾Ö´Ï¸ŞÀÌ¼ÇÀÌ ¹«±â¸¦ ÈÖµÎ¸£°Å³ª ¹ß»çÇÏ´Â ÇÁ·¹ÀÓ±îÁö ´ë±â
+        // ì• ë‹ˆë©”ì´ì…˜ì´ ë¬´ê¸°ë¥¼ íœ˜ë‘ë¥´ê±°ë‚˜ ë°œì‚¬í•˜ëŠ” í”„ë ˆì„ê¹Œì§€ ëŒ€ê¸°
         yield return new WaitForSeconds(attackWindupTime);
 
-        // Áö¿¬ ½Ã°£ µ¿¾È ÀûÀÌ Á×Áö ¾Ê¾ÒÀ» ¶§¸¸ ½ÇÁ¦ Åõ»çÃ¼ »ı¼º
+        // ì§€ì—° ì‹œê°„ ë™ì•ˆ ì ì´ ì£½ì§€ ì•Šì•˜ì„ ë•Œë§Œ ì‹¤ì œ íˆ¬ì‚¬ì²´ ìƒì„±
         if (!isDead)
         {
             FireProjectiles(data, targetPosition);
         }
 
-        isAttacking = false; // ´Ù½Ã ÀÌµ¿ ¹× ÃßÀû Àç°³
+        isAttacking = false; // ë‹¤ì‹œ ì´ë™ ë° ì¶”ì  ì¬ê°œ
     }
 
     private IEnumerator MeleeAttackRoutine()
@@ -234,7 +245,7 @@ public class EnemyAINetcode : NetworkBehaviour
         isAttacking = false;
     }
 
-    // --- ¿ø°Å¸® Åõ»çÃ¼ ¹ß»ç ÇÔ¼ö ---
+    // --- ì›ê±°ë¦¬ íˆ¬ì‚¬ì²´ ë°œì‚¬ í•¨ìˆ˜ ---
     private void FireProjectiles(EnemyDataSO data, Vector2 targetPosition)
     {
         if (data.projectilePrefab == null) return;
@@ -266,15 +277,15 @@ public class EnemyAINetcode : NetworkBehaviour
     private IEnumerator DeathRoutine()
     {
         isDead = true;
-        rb.linearVelocity = Vector2.zero; // Áï½Ã Á¤Áö
+        rb.linearVelocity = Vector2.zero; // ì¦‰ì‹œ ì •ì§€
 
         Collider2D col = GetComponent<Collider2D>();
-        if (col != null) col.enabled = false;  // Äİ¶óÀÌ´õ ºñÈ°¼ºÈ­
+        if (col != null) col.enabled = false;  // ì½œë¼ì´ë” ë¹„í™œì„±í™”
 
         visualNetcode.TriggerDeathAnimation();
         yield return new WaitForSeconds(deathAnimationDuration);
 
-        // Ç®¸µ/ÆÄ±« ·ÎÁ÷ ½ÇÇà
+        // í’€ë§/íŒŒê´´ ë¡œì§ ì‹¤í–‰
         NetworkObject netObj = GetComponent<NetworkObject>();
         if (netObj != null && netObj.IsSpawned)
         {

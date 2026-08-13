@@ -14,6 +14,9 @@ public class PlayerMovementNetcode : NetworkBehaviour
 
     private Vector2 movement;
     private bool isDashing = false;
+    private Vector2 lastMoveDir = Vector2.right;
+    private float currentDashTime = 0f;
+    private Vector2 currentDashDir = Vector2.zero;
 
     [Header("Dash Settings")]
     public float dashSpeed = 15f;
@@ -82,7 +85,6 @@ public class PlayerMovementNetcode : NetworkBehaviour
 
         if (!IsOwner) return;
         UpdateLocalDashUI();
-        if (isDashing) return;
 
         if (statusManager != null && (statusManager.isStunned.Value || statusManager.isTaunted.Value || statusManager.isFeared.Value))
         {
@@ -90,17 +92,38 @@ public class PlayerMovementNetcode : NetworkBehaviour
             return;
         }
 
-        movement = InputManager.Instance.Controls.Gameplay.Move.ReadValue<Vector2>().normalized;
+        // 실시간 입력값 갱신
+        movement = InputManager.Instance.Controls.Gameplay.Move.ReadValue<Vector2>();
+
+        if (movement.magnitude > 0.1f)
+        {
+            lastMoveDir = movement.normalized;
+        }
     }
 
     void FixedUpdate()
     {
         if (!IsOwner) return;
-        if (isDashing) return;
 
         if (statusManager != null && statusManager.isStunned.Value)
         {
             rb.linearVelocity = Vector2.zero;
+            return;
+        }
+
+        if (isDashing)
+        {
+            currentDashTime -= Time.fixedDeltaTime;
+
+            if (currentDashTime > 0f)
+            {
+                rb.linearVelocity = currentDashDir * dashSpeed;
+            }
+            else
+            {
+                isDashing = false;
+                rb.linearVelocity = Vector2.zero;
+            }
             return;
         }
 
@@ -128,11 +151,15 @@ public class PlayerMovementNetcode : NetworkBehaviour
     private void OnDashPerformed(InputAction.CallbackContext context)
     {
         if (statusManager != null && (statusManager.isStunned.Value || statusManager.isTaunted.Value || statusManager.isFeared.Value)) return;
+
         if (isDashing) return;
 
         if (localDashCount > 0 && !isLocalCooldown)
         {
-            StartCoroutine(LocalDashRoutine());
+            isDashing = true;
+            currentDashTime = dashDuration;
+            currentDashDir = movement.magnitude > 0.1f ? movement.normalized : lastMoveDir;
+
             RequestDashServerRpc();
 
             localDashCount--;
@@ -197,18 +224,6 @@ public class PlayerMovementNetcode : NetworkBehaviour
             dashTimerUI.enabled = false;
             if (dashTimerBG != null) dashTimerBG.enabled = false; // 배경 끄기
         }
-    }
-
-    private IEnumerator LocalDashRoutine()
-    {
-        isDashing = true;
-        Vector2 dashDirection = movement != Vector2.zero ? movement.normalized : new Vector2(transform.localScale.x, 0).normalized;
-
-        // Unity 6 API 반영: velocity -> linearVelocity
-        rb.linearVelocity = dashDirection * dashSpeed;
-        yield return new WaitForSeconds(dashDuration);
-
-        isDashing = false;
     }
 
     [ServerRpc]

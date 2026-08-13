@@ -47,7 +47,7 @@ public class MonsterSpawnerNetcode : NetworkBehaviour
     public void InitializeSpawner(StageDataSO stageData)
     {
         bool isServerAuthority = NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer;
-        Debug.Log($"[MonsterSpawner] InitializeSpawner È£ÃâµÊ! (¼­¹ö ±ÇÇÑ: {isServerAuthority}, µ¥ÀÌÅÍ Á¸Àç: {stageData != null})");
+        Debug.Log($"[MonsterSpawner] InitializeSpawner í˜¸ì¶œë¨! (ì„œë²„ ê¶Œí•œ: {isServerAuthority}, ë°ì´í„° ì¡´ì¬: {stageData != null})");
 
         if (!isServerAuthority || stageData == null) return;
 
@@ -56,7 +56,7 @@ public class MonsterSpawnerNetcode : NetworkBehaviour
 
         if (floorData.waves == null || floorData.waves.Length == 0)
         {
-            Debug.LogWarning($"[½ºÆ÷³Ê] {currentFloor}Ãş¿¡ ¼³Á¤µÈ ¿şÀÌºê µ¥ÀÌÅÍ°¡ ¾ø½À´Ï´Ù! Áï½Ã Å¬¸®¾î Ã³¸®ÇÕ´Ï´Ù.");
+            Debug.LogWarning($"[ìŠ¤í¬ë„ˆ] {currentFloor}ì¸µì— ì„¤ì •ëœ ì›¨ì´ë¸Œ ë°ì´í„°ê°€ ì—†ìŠµë‹ˆë‹¤! ì¦‰ì‹œ í´ë¦¬ì–´ ì²˜ë¦¬í•©ë‹ˆë‹¤.");
             CombatStageManager.Instance.StageCleared();
             return;
         }
@@ -77,7 +77,7 @@ public class MonsterSpawnerNetcode : NetworkBehaviour
 
         if (totalSpawnedCount == 0)
         {
-            Debug.LogWarning($"[½ºÆ÷³Ê] {currentFloor}ÃşÀÇ ¿şÀÌºê´Â Á¸ÀçÇÏÁö¸¸, 'Spawn Groups'ÀÇ Count°¡ 0ÀÌ°Å³ª ÇÁ¸®ÆÕÀÌ ÇÒ´çµÇÁö ¾Ê¾Ò½À´Ï´Ù! StageDataSO ÀÎ½ºÆåÅÍ¸¦ È®ÀÎÇÏ½Ê½Ã¿À.");
+            Debug.LogWarning($"[ìŠ¤í¬ë„ˆ] {currentFloor}ì¸µì˜ ì›¨ì´ë¸ŒëŠ” ì¡´ì¬í•˜ì§€ë§Œ, 'Spawn Groups'ì˜ Countê°€ 0ì´ê±°ë‚˜ í”„ë¦¬íŒ¹ì´ í• ë‹¹ë˜ì§€ ì•Šì•˜ìŠµë‹ˆë‹¤! StageDataSO ì¸ìŠ¤í™í„°ë¥¼ í™•ì¸í•˜ì‹­ì‹œì˜¤.");
             CombatStageManager.Instance.StageCleared();
             return;
         }
@@ -93,7 +93,7 @@ public class MonsterSpawnerNetcode : NetworkBehaviour
 
             if (currentWave.spawnGroups != null)
             {
-                // °¢ ±×·ì¿¡ Á¤ÀÇµÈ ÇÁ¸®ÆÕ°ú °³¼ö¸¸Å­ ¼ø¼­´ë·Î ½ºÆù
+                // ê° ê·¸ë£¹ì— ì •ì˜ëœ í”„ë¦¬íŒ¹ê³¼ ê°œìˆ˜ë§Œí¼ ìˆœì„œëŒ€ë¡œ ìŠ¤í°
                 foreach (var group in currentWave.spawnGroups)
                 {
                     for (int i = 0; i < group.count; i++)
@@ -121,11 +121,15 @@ public class MonsterSpawnerNetcode : NetworkBehaviour
         EnemyStatManager statCheck = prefab.GetComponent<EnemyStatManager>();
         if (statCheck == null)
         {
-            Debug.LogError($"[MonsterSpawner] Àß¸øµÈ ÇÁ¸®ÆÕ ½ºÆù ½Ãµµ! '{prefab.name}' ¿ÀºêÁ§Æ®¿¡´Â EnemyStatManager°¡ ¾ø½À´Ï´Ù. StageDataSO ÀÎ½ºÆåÅÍ¿¡ Åõ»çÃ¼³ª Àß¸øµÈ ÇÁ¸®ÆÕÀÌ ¿¬°áµÇ¾ú´ÂÁö È®ÀÎÇÏ½Ê½Ã¿À.");
+            Debug.LogError($"[MonsterSpawner] ì˜ëª»ëœ í”„ë¦¬íŒ¹ ìŠ¤í° ì‹œë„! '{prefab.name}' ì˜¤ë¸Œì íŠ¸ì—ëŠ” EnemyStatManagerê°€ ì—†ìŠµë‹ˆë‹¤. StageDataSO ì¸ìŠ¤í™í„°ì— íˆ¬ì‚¬ì²´ë‚˜ ì˜ëª»ëœ í”„ë¦¬íŒ¹ì´ ì—°ê²°ë˜ì—ˆëŠ”ì§€ í™•ì¸í•˜ì‹­ì‹œì˜¤.");
             return;
         }
 
         GameObject mob = Instantiate(prefab, position, Quaternion.identity);
+
+        // Spawn() must be called BEFORE ApplyScaling,
+        // because ApplyScaling checks IsServer which is only true after Spawn().
+        mob.GetComponent<NetworkObject>().Spawn();
 
         EnemyStatManager stat = mob.GetComponent<EnemyStatManager>();
         if (stat != null)
@@ -134,8 +138,6 @@ public class MonsterSpawnerNetcode : NetworkBehaviour
             int playerCount = NetworkManager.Singleton.ConnectedClientsIds.Count;
             stat.ApplyScaling(floor, Mathf.Max(1, playerCount));
         }
-
-        mob.GetComponent<NetworkObject>().Spawn();
     }
 
     private Vector3 GetValidSpawnPosition()
@@ -162,11 +164,11 @@ public class MonsterSpawnerNetcode : NetworkBehaviour
         if (NetworkManager.Singleton == null || !NetworkManager.Singleton.IsServer) return;
 
         totalDeadCount++;
-        Debug.Log($"[¼­¹ö] ¸ó½ºÅÍ Ã³Ä¡: ({totalDeadCount} / {totalSpawnedCount})");
+        Debug.Log($"[ì„œë²„] ëª¬ìŠ¤í„° ì²˜ì¹˜: ({totalDeadCount} / {totalSpawnedCount})");
 
         if (totalDeadCount >= totalSpawnedCount && totalSpawnedCount > 0)
         {
-            Debug.Log("[¼­¹ö] ¹æ Å¬¸®¾î! ´ÙÀ½ Ãş Æ÷Å»À» »ı¼ºÇÕ´Ï´Ù.");
+            Debug.Log("[ì„œë²„] ë°© í´ë¦¬ì–´! ë‹¤ìŒ ì¸µ í¬íƒˆì„ ìƒì„±í•©ë‹ˆë‹¤.");
             CombatStageManager.Instance.StageCleared();
         }
     }
