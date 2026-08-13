@@ -15,6 +15,11 @@ public class EnemyAINetcode : NetworkBehaviour
     private float searchTimer = 0f;
     private Transform targetPlayer;
 
+    public Transform TargetPlayer => targetPlayer;
+
+    [HideInInspector]
+    public bool canAutoAttack = true;
+
     [Header("Separation Settings (겹침 방지)")]
     public float separationRadius = 0.8f;
     public float separationWeight = 1.0f;
@@ -30,6 +35,10 @@ public class EnemyAINetcode : NetworkBehaviour
     private float lastAttackTime = 0f;
     private bool isAttacking = false;
     private bool isDead = false;
+
+    [Header("Special Pattern (Optional)")]
+    public BossPatternBase specialAttackPattern; // 일반 몹도 동일한 모듈 사용
+    private bool isExecutingSpecialPattern = false;
 
     private void Awake()
     {
@@ -56,25 +65,36 @@ public class EnemyAINetcode : NetworkBehaviour
         }
 
         // --- 공격 판정 로직 ---
-        if (targetPlayer != null && !statManager.isStunned)
+        if (canAutoAttack && targetPlayer != null && !statManager.isStunned && !isExecutingSpecialPattern)
         {
             float dist = Vector2.Distance(transform.position, targetPlayer.position);
             var data = statManager.enemyData;
 
-            if (dist <= data.attackRange)
+            // 특수 패턴(돌진, 장판)이 부착되어 있고, 사거리 내에 들어왔을 경우
+            if (specialAttackPattern != null && dist <= data.attackRange)
             {
                 if (Time.time - lastAttackTime >= data.attackCooldown)
                 {
-                    // 원거리 적일 경우
+                    isExecutingSpecialPattern = true;
+                    rb.linearVelocity = Vector2.zero; // 이동 정지
+
+                    // 특수 패턴 실행 (종료 시 람다식으로 다시 AI 활성화)
+                    specialAttackPattern.ExecutePattern(targetPlayer, () =>
+                    {
+                        isExecutingSpecialPattern = false;
+                        lastAttackTime = Time.time;
+                    });
+                }
+            }
+            // 특수 패턴이 없는 일반 원거리/근접 몹일 경우 기존 로직 실행
+            else if (specialAttackPattern == null && dist <= data.attackRange)
+            {
+                if (Time.time - lastAttackTime >= data.attackCooldown)
+                {
                     if (data.attackType == EnemyAttackType.Projectile)
-                    {
                         StartCoroutine(RangedAttackRoutine(data, targetPlayer.position));
-                    }
-                    // 근접 적일 경우 (애니메이션만 재생, 실제 대미지는 OnCollision에서 처리됨)
                     else if (data.attackType == EnemyAttackType.Melee)
-                    {
                         StartCoroutine(MeleeAttackRoutine());
-                    }
 
                     lastAttackTime = Time.time;
                 }
