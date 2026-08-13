@@ -1,5 +1,7 @@
 using System.Collections;
+using System.Collections.Generic;
 using Unity.Netcode;
+using UnityEditor.VersionControl;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -374,6 +376,8 @@ public class WeaponControllerNetcode : NetworkBehaviour
         if (isSingle || isMelee || isSlash)
         {
             int hitCount = Physics2D.OverlapCircle(attackOrigin, step.attackRange, enemyFilter, hitBuffer);
+            HashSet<IDamageable> alreadyHitEnemies = new HashSet<IDamageable>();
+
             if (isSingle && hitCount > 0)
             {
                 float closestDist = float.MaxValue;
@@ -391,9 +395,13 @@ public class WeaponControllerNetcode : NetworkBehaviour
 
                 if (closestEnemy != null)
                 {
-                    Vector3 dirToEnemy = (closestEnemy.transform.position - attackOrigin).normalized;
-                    DamageInfo info = CreateBaseDamageInfo(finalDamage, dirToEnemy, step.knockbackForce);
-                    closestEnemy.GetComponent<IDamageable>()?.TakeDamage(info);
+                    IDamageable target = closestEnemy.GetComponentInParent<IDamageable>();
+                    if (target != null)
+                    {
+                        Vector3 dirToEnemy = (closestEnemy.transform.position - attackOrigin).normalized;
+                        DamageInfo info = CreateBaseDamageInfo(finalDamage, dirToEnemy, step.knockbackForce);
+                        target.TakeDamage(info);
+                    }
                 }
             }
             // 기존 다수 타격(Melee, Slash) 처리
@@ -401,12 +409,17 @@ public class WeaponControllerNetcode : NetworkBehaviour
             {
                 for (int i = 0; i < hitCount; i++)
                 {
-                    Vector3 dirToEnemy = (hitBuffer[i].transform.position - attackOrigin).normalized;
+                    Collider2D enemyCol = hitBuffer[i];
+
+                    IDamageable target = enemyCol.GetComponentInParent<IDamageable>();
+                    if (target == null) continue;
+                    if (alreadyHitEnemies.Contains(target)) continue;
+
+                    Vector3 dirToEnemy = (enemyCol.transform.position - attackOrigin).normalized;
 
                     if (isSlash)
                     {
-                        //타격 원점에 가까이 있는 적은 벡터 계산 시 오류가 나므로 각도 검사를 생략
-                        float distToCenter = Vector2.Distance(attackOrigin, hitBuffer[i].transform.position);
+                        float distToCenter = Vector2.Distance(attackOrigin, enemyCol.transform.position);
                         if (distToCenter > 0.1f)
                         {
                             float angleToEnemy = Vector2.Angle(direction, dirToEnemy);
@@ -414,8 +427,10 @@ public class WeaponControllerNetcode : NetworkBehaviour
                         }
                     }
 
+                    // 타격 성공 시 해당 개체를 기록하고 대미지 적용
+                    alreadyHitEnemies.Add(target);
                     DamageInfo info = CreateBaseDamageInfo(finalDamage, dirToEnemy, step.knockbackForce);
-                    hitBuffer[i].GetComponent<IDamageable>()?.TakeDamage(info);
+                    target.TakeDamage(info);
                 }
             }
         }

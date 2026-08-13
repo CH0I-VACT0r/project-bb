@@ -2,13 +2,13 @@ using System;
 using System.Collections;
 using UnityEngine;
 
-public class Pattern_Dash : BossPatternBase // ¹ü¿ë Base Å¬·¡½º·Î »ó¼Ó
+public class Pattern_Dash : BossPatternBase // ë²”ìš© Base í´ë˜ìŠ¤ë¡œ ìƒì†
 {
     [Header("Dash Settings")]
-    public float dashPrepareTime = 1.0f; // ¸ØÃç¼­ ±â ¸ğÀ¸´Â ½Ã°£
-    public float dashForce = 20f;        // µ¹Áø ¼Óµµ/Èû
-    public float dashDuration = 0.5f;    // µ¹Áø Áö¼Ó ½Ã°£
-    public float damage = 20f;
+    public float dashPrepareTime = 0.25f; // ë©ˆì¶°ì„œ ê¸° ëª¨ìœ¼ëŠ” ì‹œê°„
+    public float dashForce = 10f;        // ëŒì§„ ì†ë„/í˜
+    public float dashDuration = 0.4f;    // ëŒì§„ ì§€ì† ì‹œê°„
+    public float damage = 10f;
 
     private Rigidbody2D rb;
 
@@ -25,35 +25,57 @@ public class Pattern_Dash : BossPatternBase // ¹ü¿ë Base Å¬·¡½º·Î »ó¼Ó
 
     private IEnumerator DashRoutine()
     {
-        // 1. ±âÁ¸ ÀÌµ¿ ¸ØÃã ¹× ¹æÇâ °íÁ¤
         rb.linearVelocity = Vector2.zero;
-        Vector2 targetDir = (currentTarget.position - transform.position).normalized;
+        ToggleWarningSpriteClientRpc(true);
 
-        // TODO: Å¬¶óÀÌ¾ğÆ® ÂÊ¿¡ ºÓÀº»ö Á÷¼± °æ·Î(Telegraph)¸¦ ±×¸®´Â ClientRpc È£Ãâ °¡´É
-
-        // 2. ÁØºñ ½Ã°£ ´ë±â
+        // ê¸° ëª¨ìœ¼ëŠ” ì‹œê°„ ëŒ€ê¸°
         yield return new WaitForSeconds(dashPrepareTime);
 
-        // 3. µ¹Áø ½ÇÇà
-        rb.AddForce(targetDir * dashForce, ForceMode2D.Impulse);
+        // ê³µê²© ì§ì „ í”Œë ˆì´ì–´ ìœ„ì¹˜ë¡œ ë°©í–¥ ê³„ì‚° (360ë„ ì •ë°€ ì¡°ì¤€)
+        Vector2 targetDir = Vector2.zero;
+        if (currentTarget != null)
+        {
+            targetDir = (currentTarget.position - transform.position).normalized;
+        }
 
-        // 4. µ¹Áø ½Ã°£ ´ë±â (ÀÌ µ¿¾È Ãæµ¹(OnCollisionEnter2D) ½Ã ´ë¹ÌÁö ÆÇÁ¤)
-        yield return new WaitForSeconds(dashDuration);
+        ToggleWarningSpriteClientRpc(false);
 
-        // 5. Á¤Áö ÈÄ ÆĞÅÏ Á¾·á
+        // ì• ë‹ˆë©”ì´ì…˜ ë°œë™
+        if (!string.IsNullOrEmpty(animatorTriggerName))
+        {
+            PlayPatternAnimationClientRpc(animatorTriggerName);
+        }
+
+        // ë¬¼ë¦¬ ê°•ì œ ëŒì§„
+        if (targetDir != Vector2.zero)
+        {
+            float elapsed = 0f;
+            while (elapsed < dashDuration)
+            {
+                rb.linearVelocity = targetDir * dashForce;
+                elapsed += Time.fixedDeltaTime;
+
+                yield return new WaitForFixedUpdate(); // ë¬¼ë¦¬ ì—°ì‚° ì£¼ê¸°ì™€ ë™ê¸°í™”
+            }
+        }
+
+        // íŒ¨í„´ ì¢…ë£Œ
         rb.linearVelocity = Vector2.zero;
         FinishPattern();
     }
 
-    // µ¹Áø Áß ÇÃ·¹ÀÌ¾î¿Í ºÎµúÈ÷¸é ´ë¹ÌÁö Àû¿ë (¼­¹ö Àü¿ë)
-    private void OnCollisionEnter2D(Collision2D collision)
+    // ëŒ€ì‹œ ì¤‘ í”Œë ˆì´ì–´ì™€ ë¶€ë”ªí ë•Œ í”¼í•´ (íŠ¸ë¦¬ê±° ì½œë¼ì´ë”)
+    private void OnTriggerEnter2D(Collider2D other)
     {
         if (!IsServer) return;
-        if (collision.gameObject.CompareTag("Player"))
+        if (other.CompareTag("Player"))
         {
-            // DamageInfo ±¸Á¶Ã¼¿¡ ¸ÂÃç ´ë¹ÌÁö Àü´Ş
-            DamageInfo info = new DamageInfo { damageAmount = this.damage, attackType = AttackAttribute.Physical };
-            collision.gameObject.GetComponent<IDamageable>()?.TakeDamage(info);
+            IDamageable target = other.GetComponentInParent<IDamageable>();
+            if (target != null)
+            {
+                DamageInfo info = new DamageInfo { damageAmount = this.damage, attackType = AttackAttribute.Physical };
+                target.TakeDamage(info);
+            }
         }
     }
 }

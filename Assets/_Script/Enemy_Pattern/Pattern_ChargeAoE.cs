@@ -18,17 +18,17 @@ public class Pattern_ChargeAoE : BossPatternBase
 
     private IEnumerator ChargeAoERoutine()
     {
-        // 1. 이동 정지
         Rigidbody2D rb = GetComponent<Rigidbody2D>();
         if (rb != null) rb.linearVelocity = Vector2.zero;
 
-        // 2. 장판 경고 이펙트 켜기 (ClientRpc 호출)
-        ShowAoEWarningClientRpc(transform.position, attackRadius, chargeTime);
+        ToggleWarningSpriteClientRpc(true);
 
-        // 3. 차지 대기
+        // Todo : 점점 채워지는 공격 범위 표시
+
         yield return new WaitForSeconds(chargeTime);
 
-        // 4. 범위 내 실제 타격 판정
+        ToggleWarningSpriteClientRpc(false);
+
         Collider2D[] hits = Physics2D.OverlapCircleAll(transform.position, attackRadius, playerLayer);
         foreach (var hit in hits)
         {

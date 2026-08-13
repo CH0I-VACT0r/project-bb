@@ -11,21 +11,28 @@ public abstract class BossPatternBase : NetworkBehaviour
     public float patternWeight = 1f;
     [Tooltip("실행 시킬 애니메이터 트리거 이름")]
     public string animatorTriggerName;
+    [Header("Warning Visuals")]
+    public SpriteRenderer warningSprite;
 
     protected Action onPatternComplete;
     protected Transform currentTarget;
+
+    public override void OnNetworkSpawn()
+    {
+        base.OnNetworkSpawn();
+
+        // 스폰(또는 풀에서 꺼내짐)될 때 무조건 경고 이미지를 끔
+        if (IsServer)
+        {
+            ToggleWarningSpriteClientRpc(false);
+        }
+    }
 
     // BossController가 패턴을 시작할 때 호출하는 진입점
     public virtual void ExecutePattern(Transform target, Action onComplete)
     {
         currentTarget = target;
         onPatternComplete = onComplete;
-
-        // 공통 로직: 지정된 애니메이션 트리거가 있다면 모든 클라이언트에게 재생 명령 (서버 -> 클라이언트)
-        if (!string.IsNullOrEmpty(animatorTriggerName))
-        {
-            PlayPatternAnimationClientRpc(animatorTriggerName);
-        }
 
         // 개별 로직(돌진, 장판 등) 실행
         OnPatternStart();
@@ -38,6 +45,15 @@ public abstract class BossPatternBase : NetworkBehaviour
         if (anim != null)
         {
             anim.SetTrigger(triggerName);
+        }
+    }
+
+    [ClientRpc]
+    protected void ToggleWarningSpriteClientRpc(bool isOn)
+    {
+        if (warningSprite != null)
+        {
+            warningSprite.enabled = isOn;
         }
     }
 
