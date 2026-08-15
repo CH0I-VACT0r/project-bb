@@ -562,11 +562,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8355874129454218428, guid: d7c6196ef90d05c40b420b83a4bc63ae, type: 3}
       propertyPath: TransitionStateInfoList.Array.data[0].TransitionDuration
-      value: 0.25
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8355874129454218428, guid: d7c6196ef90d05c40b420b83a4bc63ae, type: 3}
       propertyPath: TransitionStateInfoList.Array.data[1].TransitionDuration
-      value: 0.25
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8355874129454218428, guid: d7c6196ef90d05c40b420b83a4bc63ae, type: 3}
       propertyPath: TransitionStateInfoList.Array.data[2].TransitionDuration
@@ -574,7 +574,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8355874129454218428, guid: d7c6196ef90d05c40b420b83a4bc63ae, type: 3}
       propertyPath: TransitionStateInfoList.Array.data[3].TransitionDuration
-      value: 0.25
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8355874129454218428, guid: d7c6196ef90d05c40b420b83a4bc63ae, type: 3}
       propertyPath: TransitionStateInfoList.Array.data[4].TransitionDuration
@@ -582,11 +582,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8355874129454218428, guid: d7c6196ef90d05c40b420b83a4bc63ae, type: 3}
       propertyPath: TransitionStateInfoList.Array.data[5].TransitionDuration
-      value: 0.25
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8355874129454218428, guid: d7c6196ef90d05c40b420b83a4bc63ae, type: 3}
       propertyPath: TransitionStateInfoList.Array.data[6].TransitionDuration
-      value: 0.25
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8355874129454218428, guid: d7c6196ef90d05c40b420b83a4bc63ae, type: 3}
       propertyPath: AnimatorParameterEntries.ParameterEntries.Array.data[0].name

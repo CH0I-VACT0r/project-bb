@@ -13,11 +13,11 @@ MonoBehaviour:
   m_Name: NangIn
   m_EditorClassIdentifier: Assembly-CSharp::PlayerClassDataSO
   classId: 0
-  className: Barbarian
+  className: "\uB0AD\uC778"
   playerPrefab: {fileID: 4638417343498770575, guid: e031234b54c263a43bd0c1934f68ffd3, type: 3}
   classAnimator: {fileID: 9100000, guid: fb3629f915c736a4fb887c78c57aa360, type: 2}
   identityUXML: {fileID: 9197481963319205126, guid: 9f42646cf98284448a9ca427a664ca8e, type: 3}
-  defaultWeapon: {fileID: 11400000, guid: f39674510b028924fa9833ce560fa983, type: 2}
+  defaultWeapon: {fileID: 11400000, guid: 0782d0999cb265a4bb1491cab19aee21, type: 2}
   maxHealth: 100
   healthRegen: 1
   defense: 10

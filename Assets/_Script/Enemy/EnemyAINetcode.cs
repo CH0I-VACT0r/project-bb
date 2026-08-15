@@ -19,6 +19,7 @@ public class EnemyAINetcode : NetworkBehaviour
 
     [HideInInspector]
     public bool canAutoAttack = true;
+    public bool IsDirectionLocked => isDead || isAttacking || isExecutingSpecialPattern;
 
     [Header("Separation Settings (겹침 방지)")]
     public float separationRadius = 0.8f;
