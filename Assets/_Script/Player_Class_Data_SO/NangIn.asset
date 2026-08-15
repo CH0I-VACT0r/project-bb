@@ -1,0 +1,54 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 811b79ebf04c76249b7a9c4358c73b5b, type: 3}
+  m_Name: NangIn
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerClassDataSO
+  classId: 0
+  className: Barbarian
+  playerPrefab: {fileID: 4638417343498770575, guid: e031234b54c263a43bd0c1934f68ffd3, type: 3}
+  classAnimator: {fileID: 9100000, guid: fb3629f915c736a4fb887c78c57aa360, type: 2}
+  identityUXML: {fileID: 9197481963319205126, guid: 9f42646cf98284448a9ca427a664ca8e, type: 3}
+  defaultWeapon: {fileID: 11400000, guid: f39674510b028924fa9833ce560fa983, type: 2}
+  maxHealth: 100
+  healthRegen: 1
+  defense: 10
+  magicDefense: 10
+  evasion: 0
+  maxShield: 1
+  shieldResetTime: 10
+  attackDamage: 10
+  abilityPower: 0
+  cooldownReduction: 0
+  critChance: 5
+  critDamage: 150
+  physicalPenetration: 0
+  magicPenetration: 0
+  accuracy: 100
+  moveSpeed: 3
+  luck: 1
+  charisma: 1
+  bonusFireDamage: 0
+  bonusPoisonDamage: 0
+  bonusBleedDamage: 0
+  bonusSlowEffect: 0
+  bonusVulnerableEffect: 0
+  bonusStunDuration: 0
+  bonusSlowDuration: 0
+  bonusTauntDuration: 0
+  bonusFearDuration: 0
+  bonusVulnerableDuration: 0
+  bonusFireDuration: 0
+  bonusPoisonDuration: 0
+  bleedDecayReduction: 0
+  ccResistanceStat: 0
+  dotDamageResistanceStat: 0
+  elementalResistanceStat: 0

@@ -21,6 +21,12 @@ public struct WeaponActionStep
     public WeaponTypeFlags actionTypes; // 중복 선택 가능 (예: Melee + Ranged 동시 가능)
     public float stepDelay; // 이전 타격과의 간격 (초 단위)
 
+    [Header("Animation & Sound")]
+    public string animationTriggerName;
+    public float vfxScaleMultiplier;
+    public AudioClip attackSound;
+    [Range(0f, 1f)] public float attackVolume;
+    
     [Header("Area Settings")]
     public float attackRange;
     public float slashAngle;
@@ -57,6 +63,7 @@ public class WeaponDataSO : ScriptableObject
     [Header("Rendering")]
     public Sprite weaponSprite;
     public float weaponScale = 1.0f;
+    public RuntimeAnimatorController weaponAnimatorController;
 
     [Header("Targeting Settings")]
     public bool isBossPriority = true; // 보스 우선 타격 여부

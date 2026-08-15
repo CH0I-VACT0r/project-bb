@@ -13,24 +13,24 @@ MonoBehaviour:
   m_Name: Hound
   m_EditorClassIdentifier: Assembly-CSharp::EnemyDataSO
   enemyName: Enemy
-  maxHP: 45
-  moveSpeed: 2.5
-  defense: 4
-  magicDefense: 4
+  maxHP: 70
+  moveSpeed: 2
+  defense: 5
+  magicDefense: 5
   evasion: 0
   immuneElements: 0
   immuneCC: 0
-  attackAttribute: 1
+  attackAttribute: 0
   baseDamage: 7
   knockbackForce: 0
   accuracy: 100
   physicalPenetration: 0
   magicPenetration: 0
-  inflictElement: 0
-  elementBuildupAmount: 0
-  elementDotDamage: 0
-  inflictCC: 2
-  attackType: 1
+  inflictElement: 4
+  elementBuildupAmount: 2
+  elementDotDamage: 2
+  inflictCC: 0
+  attackType: 0
   attackRange: 3
   attackCooldown: 5
   projectileSpeed: 2

@@ -1,10 +1,13 @@
 using System.Collections;
 using System.Collections.Generic;
 using Unity.Netcode;
+using Unity.Netcode.Components;
 using UnityEditor.VersionControl;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.Rendering;
 
+[RequireComponent(typeof(SpriteRenderer),typeof(NetworkAnimator))]
 public class WeaponControllerNetcode : NetworkBehaviour
 {
     public PlayerStatManager playerStats;
@@ -16,9 +19,6 @@ public class WeaponControllerNetcode : NetworkBehaviour
     public float aimAssistRadius = 0.4f; // 커서 주변 적 탐지 반경
     public float maxAssistAngle = 45f;   // 플레이어 조준 방향에서 허용되는 최대 보정 각도
     public LayerMask enemyLayerMask;
-
-    [Header("Visuals")]
-    public AoEIndicatorMesh aoeIndicator;
 
     [Header("State")]
     public bool isLobbyMode = false;
@@ -53,7 +53,11 @@ public class WeaponControllerNetcode : NetworkBehaviour
     private int currentComboIndex = 0;
     private float autoAttackTimer = 0f;
     private bool isAttacking = false;
-    private Coroutine aoeCoroutine;
+    private Coroutine slashCoroutine;
+
+    private Animator weaponAnimator; 
+    private NetworkAnimator weaponNetAnimator;
+    private AudioSource audioSource;
 
     #region Unity Lifecycle
     public void SetLobbyMode(bool isLobby)
@@ -69,24 +73,14 @@ public class WeaponControllerNetcode : NetworkBehaviour
         enemyFilter.useTriggers = true;
 
         weaponSprite = GetComponent<SpriteRenderer>();
+        weaponAnimator = GetComponentInChildren<Animator>();
+        weaponNetAnimator = GetComponent<NetworkAnimator>();
 
-        if (aoeIndicator == null)
-        {
-            GameObject indicatorObj = new GameObject("Dynamic_AoE_Indicator");
-            aoeIndicator = indicatorObj.AddComponent<AoEIndicatorMesh>();
-
-            MeshRenderer mr = indicatorObj.GetComponent<MeshRenderer>();
-            mr.material = new Material(Shader.Find("Sprites/Default"));
-            mr.material.color = new Color(1f, 0f, 0f, 0.4f);
-            mr.sortingOrder = 100;
-
-            indicatorObj.SetActive(false);
-        }
-
-        if (aoeIndicator != null)
-        {
-            aoeIndicator.transform.SetParent(this.transform.root);
-        }
+        audioSource = gameObject.AddComponent<AudioSource>();
+        audioSource.playOnAwake = false;
+        audioSource.spatialBlend = 1f;
+        audioSource.minDistance = 5f;
+        audioSource.maxDistance = 20f;
     }
 
     public void EquipWeapon(WeaponDataSO newWeaponData)
@@ -113,16 +107,21 @@ public class WeaponControllerNetcode : NetworkBehaviour
         {
             weaponSprite.sprite = weaponData.weaponSprite;
         }
+
+        if (weaponAnimator != null && weaponData.weaponAnimatorController != null)
+        {
+            weaponAnimator.runtimeAnimatorController = weaponData.weaponAnimatorController;
+        }
     }
 
     private void OnDisable()
     {
         StopAllCoroutines();  // 실행시킨 모든 코루틴 즉시 정지
         isAttacking = false; // 공격 상태 강제 초기화 (Deadlock 방지)
-        
-        if (aoeCoroutine != null)
+
+        if (slashCoroutine != null)
         {
-            aoeCoroutine = null; // 단일 코루틴 참조 변수 초기화
+            slashCoroutine = null;
         }
         currentState = WeaponState.Returning;
     }
@@ -131,7 +130,7 @@ public class WeaponControllerNetcode : NetworkBehaviour
     {
         if (playerTransform == null)
         {
-            if (aoeIndicator != null) Destroy(aoeIndicator.gameObject);
+            // ★ 변경: 불필요해진 aoeIndicator 삭제 로직을 걷어냈습니다.
             Destroy(gameObject);
             return;
         }
@@ -248,19 +247,15 @@ public class WeaponControllerNetcode : NetworkBehaviour
 
         for (int i = 0; i < weaponData.actionSteps.Length; i++)
         {
-            if (this == null || gameObject == null || transform == null || playerTransform == null)
-            {
-                yield break; // 코루틴 즉시 강제 종료
-            }
+            if (this == null || gameObject == null || transform == null || playerTransform == null) yield break;
 
             currentComboIndex = i;
             Vector3 direction = networkAimDir.Value;
             WeaponActionStep currentStep = weaponData.actionSteps[i];
 
-            bool isAoEAttack = (currentStep.actionTypes & (WeaponTypeFlags.Melee | WeaponTypeFlags.Slash | WeaponTypeFlags.Laser | WeaponTypeFlags.Single)) != 0;
-
             Vector3 targetPos = CalculateVisualTargetPosition(direction);
-            PlayAttackVisualLocal(direction, targetPos, currentComboIndex, isAoEAttack);
+
+            PlayAttackVisualLocal(direction, targetPos, currentComboIndex, currentStep);
 
             RequestComboAttackServerRpc(currentComboIndex, direction, targetPos);
 
@@ -275,22 +270,50 @@ public class WeaponControllerNetcode : NetworkBehaviour
         }
     }
 
-    private void PlayAttackVisualLocal(Vector3 direction, Vector3 targetPos, int comboIdx, bool isAoE)
+    private void PlayAttackVisualLocal(Vector3 direction, Vector3 targetPos, int comboIdx, WeaponActionStep step)
     {
         attackTargetPos = targetPos;
         currentState = WeaponState.Attacking;
 
-        if (aoeCoroutine != null) StopCoroutine(aoeCoroutine);
+        if (slashCoroutine != null) StopCoroutine(slashCoroutine);
 
-        // 근접/스플래시 타격일 때만 빨간색 범위 인디케이터 표시
-        if (isAoE)
+        // 물리적 회전 연산
+        if ((step.actionTypes & WeaponTypeFlags.Slash) != 0)
         {
-            aoeCoroutine = StartCoroutine(ShowAoEVisual(direction, weaponData.actionSteps[comboIdx]));
+            slashCoroutine = StartCoroutine(SlashSwingRoutine(direction, step.slashAngle, step.stepDelay, comboIdx));
+        }
+        else
+        {
+            float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
+            transform.rotation = Quaternion.Euler(0, 0, angle);
+            if (weaponSprite != null) weaponSprite.flipY = (direction.x < 0);
         }
 
-        float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
-        transform.rotation = Quaternion.Euler(0, 0, angle);
-        if (weaponSprite != null) weaponSprite.flipY = (direction.x < 0);
+        if (weaponAnimator != null)
+        {
+            float scaleMulti = step.vfxScaleMultiplier > 0f ? step.vfxScaleMultiplier : 1f;
+            float finalScale = step.attackRange * scaleMulti;
+            weaponAnimator.transform.localScale = new Vector3(finalScale, finalScale, 1f);
+
+            float forwardOffset = 0f;
+
+            if ((step.actionTypes & WeaponTypeFlags.Slash) != 0)
+            {
+                forwardOffset = step.attackRange * 0.5f;
+            }
+
+            weaponAnimator.transform.localPosition = new Vector3(forwardOffset, 0f, 0f);
+
+            if (!string.IsNullOrEmpty(step.animationTriggerName))
+            {
+                weaponAnimator.SetTrigger(step.animationTriggerName);
+            }
+        }
+
+        if (step.attackSound != null && audioSource != null)
+        {
+            audioSource.PlayOneShot(step.attackSound, step.attackVolume);
+        }
     }
 
     private Vector3 CalculateVisualTargetPosition(Vector3 direction)
@@ -332,6 +355,19 @@ public class WeaponControllerNetcode : NetworkBehaviour
 
         WeaponActionStep step = weaponData.actionSteps[comboIndex];
         ExecuteStepActionServer(step, direction, attackOrigin);
+
+        // 타격 연산이 끝난 후, 다른 모든 클라이언트들에게 시각/청각 효과 동기화
+        BroadcastAttackVisualClientRpc(comboIndex, direction, attackOrigin);
+    }
+
+    [ClientRpc]
+    private void BroadcastAttackVisualClientRpc(int comboIndex, Vector3 direction, Vector3 attackOrigin)
+    {
+        if (IsOwner) return;
+        if (weaponData == null || comboIndex < 0 || comboIndex >= weaponData.actionSteps.Length) return;
+
+        WeaponActionStep step = weaponData.actionSteps[comboIndex];
+        PlayAttackVisualLocal(direction, attackOrigin, comboIndex, step);
     }
     #endregion
 
@@ -579,39 +615,38 @@ public class WeaponControllerNetcode : NetworkBehaviour
     #endregion
 
     #region Visuals
-    private IEnumerator ShowAoEVisual(Vector3 direction, WeaponActionStep step)
+
+    private IEnumerator SlashSwingRoutine(Vector3 direction, float slashAngle, float stepDelay, int comboIndex)
     {
-        if (aoeIndicator == null) yield break;
-        MeshRenderer meshRenderer = aoeIndicator.GetComponent<MeshRenderer>();
+        float baseAngle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
 
-        aoeIndicator.ClearMesh();
-        aoeIndicator.transform.position = attackTargetPos;
+        // 홀짝 판별
+        bool isSwingRightToLeft = (comboIndex % 2 == 0);
+        float startAngle = baseAngle + (isSwingRightToLeft ? slashAngle / 2f : -slashAngle / 2f);
+        float endAngle = baseAngle + (isSwingRightToLeft ? -slashAngle / 2f : slashAngle / 2f);
 
-        if ((step.actionTypes & WeaponTypeFlags.Laser) != 0)
+        // 스윙 속도
+        float swingDuration = Mathf.Max(0.1f, stepDelay * 0.7f);
+        float elapsed = 0f;
+
+        if (weaponSprite != null) weaponSprite.flipY = false;
+
+        while (elapsed < swingDuration)
         {
-            float laserWidth = step.slashAngle > 0f ? step.slashAngle / 30f : 1f;
-            aoeIndicator.DrawRectangle(step.attackRange, laserWidth);
+            elapsed += Time.deltaTime;
+            float t = elapsed / swingDuration;
+
+            // Ease-Out
+            float easeT = 1f - Mathf.Pow(1f - t, 3f);
+
+            float currentAngle = Mathf.Lerp(startAngle, endAngle, easeT);
+            transform.rotation = Quaternion.Euler(0, 0, currentAngle);
+
+            yield return null;
         }
-        else
-        {
-            float drawAngle = ((step.actionTypes & WeaponTypeFlags.Slash) != 0) ? step.slashAngle : 360f;
-            aoeIndicator.DrawShape(step.attackRange, drawAngle, 24);
-        }
 
-        // 방향 설정 (부채꼴의 경우 진행 방향)
-        float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
-        aoeIndicator.transform.rotation = Quaternion.Euler(0, 0, angle);
-
-        // 표시
-        aoeIndicator.gameObject.SetActive(true);
-        if (meshRenderer != null) meshRenderer.enabled = true;
-
-        yield return new WaitForSeconds(0.15f);
-
-        // 숨기기
-        if (meshRenderer != null) meshRenderer.enabled = false;
-        aoeIndicator.gameObject.SetActive(false);
-        aoeIndicator.ClearMesh();
+        // 오차 보정
+        transform.rotation = Quaternion.Euler(0, 0, endAngle);
     }
     #endregion
 }

@@ -1,5 +1,6 @@
 using System.Collections;
 using Unity.Netcode;
+using Unity.Netcode.Components;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.InputSystem;
@@ -11,6 +12,7 @@ public class PlayerMovementNetcode : NetworkBehaviour
     private Rigidbody2D rb;
     private PlayerStatManager stats;
     private StatusEffectManagerNetcode statusManager;
+    private NetworkAnimator netAnimator;
 
     private Vector2 movement;
     private bool isDashing = false;
@@ -43,6 +45,7 @@ public class PlayerMovementNetcode : NetworkBehaviour
         rb = GetComponent<Rigidbody2D>();
         stats = GetComponent<PlayerStatManager>();
         statusManager = GetComponent<StatusEffectManagerNetcode>();
+        netAnimator = GetComponent<NetworkAnimator>();
 
         if (dashTimerUI != null) dashTimerUI.enabled = false;
         if (dashTimerBG != null) dashTimerBG.enabled = false;
@@ -159,6 +162,11 @@ public class PlayerMovementNetcode : NetworkBehaviour
             isDashing = true;
             currentDashTime = dashDuration;
             currentDashDir = movement.magnitude > 0.1f ? movement.normalized : lastMoveDir;
+
+            if (netAnimator != null)
+            {
+                netAnimator.SetTrigger("Dash");
+            }
 
             RequestDashServerRpc();
 

@@ -1,0 +1,73 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 33944f026355e444aa79849a7ee3d3e0, type: 3}
+  m_Name: NangInSword
+  m_EditorClassIdentifier: Assembly-CSharp::WeaponDataSO
+  weaponName: "\uB0AD\uC778\uC758 \uAC80"
+  attackAttribute: 0
+  weaponSprite: {fileID: 21300000, guid: 32330e39baaa3a644a2c70161297c7e3, type: 3}
+  weaponScale: 0.5
+  weaponAnimatorController: {fileID: 9100000, guid: 09b18b5ee16ff1d45b730b5377badc5a, type: 2}
+  isBossPriority: 1
+  autoTargetRange: 5
+  baseDamage: 10
+  adScaling: 1
+  apScaling: 0
+  baseCooldown: 3
+  actionSteps:
+  - stepName: "1\uD0C0"
+    actionTypes: 4
+    stepDelay: 0.25
+    animationTriggerName: Slash
+    attackSound: {fileID: 0}
+    attackVolume: 0
+    attackRange: 0.3
+    slashAngle: 90
+    projectilePrefab: {fileID: 0}
+    projectileSpeed: 0
+    projectileBehavior: 0
+    projectileRange: 0
+    projectileCount: 0
+    spreadAngle: 0
+    burstCount: 0
+    burstInterval: 0
+    elements: 0
+    elementBuildUpAmount: 1
+    elementDamageMultiplier: 0
+    statusEffects: 0
+    knockbackForce: 3
+  - stepName: "2\uD0C0"
+    actionTypes: 4
+    stepDelay: 0.4
+    animationTriggerName: Slash
+    attackSound: {fileID: 0}
+    attackVolume: 0
+    attackRange: 0.3
+    slashAngle: 90
+    projectilePrefab: {fileID: 0}
+    projectileSpeed: 0
+    projectileBehavior: 0
+    projectileRange: 0
+    projectileCount: 0
+    spreadAngle: 0
+    burstCount: 0
+    burstInterval: 0
+    elements: 0
+    elementBuildUpAmount: 1
+    elementDamageMultiplier: 0
+    statusEffects: 0
+    knockbackForce: 3
+  comboWindow: 1
+  orbitRadius: 0.5
+  orbitSpeed: 120
+  travelDistance: 1.5
+  travelSpeed: 15

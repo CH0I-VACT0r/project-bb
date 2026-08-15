@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6936d060262d77b439f11b4a1bbea034, type: 3}
+  m_Name: TheDead
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyDataSO
+  enemyName: Enemy
+  maxHP: 100
+  moveSpeed: 2
+  defense: 5
+  magicDefense: 5
+  evasion: 0
+  immuneElements: 0
+  immuneCC: 0
+  attackAttribute: 0
+  baseDamage: 7
+  knockbackForce: 0
+  accuracy: 100
+  physicalPenetration: 0
+  magicPenetration: 0
+  inflictElement: 0
+  elementBuildupAmount: 5
+  elementDotDamage: 0
+  inflictCC: 8
+  attackType: 0
+  attackRange: 3
+  attackCooldown: 5
+  projectileSpeed: 2
+  projectileCount: 1
+  spreadAngle: 15
+  projectilePrefab: {fileID: 1011864096464343001, guid: d1c077b27f3f9644fb5368043671bac9, type: 3}

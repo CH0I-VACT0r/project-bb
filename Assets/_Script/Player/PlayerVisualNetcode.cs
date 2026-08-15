@@ -1,75 +1,80 @@
 using Unity.Netcode;
 using Unity.Netcode.Components;
 using UnityEngine;
-using UnityEngine.InputSystem;
+using UnityEngine.InputSystem; // InputManager를 읽기 위해 추가
 
 [RequireComponent(typeof(Animator), typeof(SpriteRenderer), typeof(NetworkAnimator))]
+[RequireComponent(typeof(Rigidbody2D), typeof(StatusEffectManagerNetcode))]
 public class PlayerVisualNetcode : NetworkBehaviour
 {
     private Animator animator;
     private SpriteRenderer spriteRenderer;
+    private Rigidbody2D rb;
+    private StatusEffectManagerNetcode statusManager;
 
-    // 좌우 반전 상태를 서버에서 모든 클라이언트로 동기화하는 변수
     private NetworkVariable<bool> isFlipped = new NetworkVariable<bool>(
         false,
         NetworkVariableReadPermission.Everyone,
         NetworkVariableWritePermission.Server
     );
 
+    private bool localFlipState = false;
+
     private void Awake()
     {
         animator = GetComponent<Animator>();
         spriteRenderer = GetComponent<SpriteRenderer>();
+        rb = GetComponent<Rigidbody2D>();
+        statusManager = GetComponent<StatusEffectManagerNetcode>();
     }
 
     public override void OnNetworkSpawn()
     {
-        // 스폰 시점 및 값이 변할 때마다 콜백 함수 연결
         isFlipped.OnValueChanged += OnFlipStateChanged;
 
-        // 늦게 접속한 클라이언트(Join late)를 위한 초기 상태 즉시 적용
-        spriteRenderer.flipX = isFlipped.Value;
+        localFlipState = isFlipped.Value;
+        spriteRenderer.flipX = localFlipState;
     }
 
     public override void OnNetworkDespawn()
     {
-        // 객체 파괴 시 메모리 누수 방지를 위해 이벤트 연결 해제
         isFlipped.OnValueChanged -= OnFlipStateChanged;
     }
 
-    // 서버 변수가 변경될 때마다 모든 클라이언트에서 자동 실행됨
     private void OnFlipStateChanged(bool previousValue, bool newValue)
     {
-        spriteRenderer.flipX = newValue;
+        if (!IsOwner)
+        {
+            spriteRenderer.flipX = newValue;
+        }
     }
 
     private void Update()
     {
         if (!IsOwner) return;
 
-        float moveInput = 0f;
-        float verticalInput = 0f;
+        // 순수 입력값
+        Vector2 input = InputManager.Instance.Controls.Gameplay.Move.ReadValue<Vector2>();
 
-        if (Keyboard.current != null)
-        {
-            if (Keyboard.current.dKey.isPressed || Keyboard.current.rightArrowKey.isPressed) moveInput = 1f;
-            else if (Keyboard.current.aKey.isPressed || Keyboard.current.leftArrowKey.isPressed) moveInput = -1f;
+        // CC기 확인
+        bool isForcedMoving = statusManager != null && (statusManager.isTaunted.Value || statusManager.isFeared.Value);
+        bool isStunned = statusManager != null && statusManager.isStunned.Value;
 
-            if (Keyboard.current.wKey.isPressed || Keyboard.current.upArrowKey.isPressed) verticalInput = 1f;
-            else if (Keyboard.current.sKey.isPressed || Keyboard.current.downArrowKey.isPressed) verticalInput = -1f;
-        }
-
-        // 애니메이션 동기화
-        bool isWalking = (moveInput != 0 || verticalInput != 0);
+        // 입력값으로 걷기 판정
+        bool isWalking = (!isStunned && input.magnitude > 0.1f) || isForcedMoving;
         animator.SetBool("isWalking", isWalking);
+        float checkDirX = isForcedMoving ? rb.linearVelocity.x : input.x;
 
-        // 스프라이트 반전 동기화
-        if (moveInput > 0 && isFlipped.Value)
+        if (checkDirX > 0.1f && localFlipState)
         {
+            localFlipState = false;
+            spriteRenderer.flipX = false;
             UpdateFlipServerRpc(false);
         }
-        else if (moveInput < 0 && !isFlipped.Value)
+        else if (checkDirX < -0.1f && !localFlipState)
         {
+            localFlipState = true;
+            spriteRenderer.flipX = true;
             UpdateFlipServerRpc(true);
         }
     }

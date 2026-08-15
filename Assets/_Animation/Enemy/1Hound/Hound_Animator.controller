@@ -20,7 +20,7 @@ AnimatorStateTransition:
   m_TransitionDuration: 0.25
   m_TransitionOffset: 0
   m_ExitTime: 0.5
-  m_HasExitTime: 1
+  m_HasExitTime: 0
   m_HasFixedDuration: 1
   m_InterruptionSource: 0
   m_OrderedInterruption: 1
@@ -144,7 +144,7 @@ AnimatorStateMachine:
   m_ChildStates:
   - serializedVersion: 1
     m_State: {fileID: 8827122234064501373}
-    m_Position: {x: 740, y: 270, z: 0}
+    m_Position: {x: 560, y: 350, z: 0}
   - serializedVersion: 1
     m_State: {fileID: -6258403655779529553}
     m_Position: {x: 180, y: 240, z: 0}
@@ -153,7 +153,7 @@ AnimatorStateMachine:
     m_Position: {x: 180, y: 320, z: 0}
   - serializedVersion: 1
     m_State: {fileID: 4900890098758457925}
-    m_Position: {x: 460, y: 270, z: 0}
+    m_Position: {x: 460, y: 260, z: 0}
   m_ChildStateMachines: []
   m_AnyStateTransitions: []
   m_EntryTransitions: []
@@ -286,7 +286,7 @@ AnimatorState:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: Attack
+  m_Name: DASH
   m_Speed: 1
   m_CycleOffset: 0
   m_Transitions:
@@ -328,7 +328,7 @@ AnimatorStateTransition:
   m_TransitionDuration: 0.25
   m_TransitionOffset: 0
   m_ExitTime: 0.5
-  m_HasExitTime: 1
+  m_HasExitTime: 0
   m_HasFixedDuration: 1
   m_InterruptionSource: 0
   m_OrderedInterruption: 1

@@ -31,7 +31,7 @@ MonoBehaviour:
   elementDotDamage: 0
   inflictCC: 0
   attackType: 0
-  attackRange: 7
+  attackRange: 1
   attackCooldown: 2
   projectileSpeed: 10
   projectileCount: 1

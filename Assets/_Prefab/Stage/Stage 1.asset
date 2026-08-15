@@ -19,17 +19,15 @@ MonoBehaviour:
   healRoomMap: {fileID: 8546966373152421952, guid: 345c48088eb3c7b40b212e39e6b1040f, type: 3}
   shopRoomMap: {fileID: 7467311217070294515, guid: 9252851b64ec27547b52f846ac2a3098, type: 3}
   defaultSpawnData:
-    targetFloor: 0
+    targetFloor: 1
     waves:
     - spawnGroups:
-      - monsterPrefab: {fileID: 8434304554716802035, guid: c8293e583571a3f46bc5ae6d1e906a72, type: 3}
-        count: 15
-      - monsterPrefab: {fileID: 8434304554716802035, guid: ca445a3d91f44394190a9fec796e67b1, type: 3}
-        count: 10
+      - monsterPrefab: {fileID: 8434304554716802035, guid: 859b7201ac3b6574696f24fd4c37530c, type: 3}
+        count: 2
       timeToNextWave: 3
   additionalMonstersPerStageStep: 3
   customFloorSpawnData:
-  - targetFloor: 1
+  - targetFloor: 2
     waves:
     - spawnGroups:
       - monsterPrefab: {fileID: 8434304554716802035, guid: c8293e583571a3f46bc5ae6d1e906a72, type: 3}
@@ -38,10 +36,8 @@ MonoBehaviour:
     - spawnGroups:
       - monsterPrefab: {fileID: 8434304554716802035, guid: ca445a3d91f44394190a9fec796e67b1, type: 3}
         count: 10
+      timeToNextWave: 5
+    - spawnGroups:
+      - monsterPrefab: {fileID: 8434304554716802035, guid: d69b98afac6d92f409ec7c7fd174ad5b, type: 3}
+        count: 2
       timeToNextWave: 0
-  - targetFloor: 0
-    waves: []
-  - targetFloor: 0
-    waves: []
-  - targetFloor: 0
-    waves: []

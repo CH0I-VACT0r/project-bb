@@ -1,5 +1,6 @@
 using UnityEngine;
 using Unity.Netcode;
+using Unity.Netcode.Components;
 using System;
 using UnityEngine.SceneManagement;
 
@@ -68,10 +69,11 @@ public class PlayerStatManager : NetworkBehaviour, IDamageable
     public NetworkVariable<int> ElementalResistanceStat = new NetworkVariable<int>(0);
 
     public event Action OnShieldBroken;
-
+    private NetworkAnimator netAnimator;
     public override void OnNetworkSpawn()
     {
         base.OnNetworkSpawn();
+        netAnimator = GetComponent<NetworkAnimator>();
 
         if (classData != null && classData.classAnimator != null)
         {
@@ -338,7 +340,12 @@ public class PlayerStatManager : NetworkBehaviour, IDamageable
 
         if (CurrentHealth.Value <= 0)
         {
+            if (netAnimator != null) netAnimator.SetTrigger("Die");
             Die();
+        }
+        else
+        {
+            if (netAnimator != null) netAnimator.SetTrigger("Hit");
         }
     }
 
