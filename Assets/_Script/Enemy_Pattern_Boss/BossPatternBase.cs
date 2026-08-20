@@ -13,6 +13,10 @@ public abstract class BossPatternBase : NetworkBehaviour
     public string animatorTriggerName;
     [Header("Warning Visuals")]
     public SpriteRenderer warningSprite;
+    [Tooltip("타격 발생 시 해당 위치에 생성할 VFX 프리팹 (선택)")]
+    public GameObject hitVfxPrefab;
+    [Tooltip("VFX 크기 배율 (기본값 1)")]
+    public float vfxScaleMultiplier = 1.0f;
 
     protected Action onPatternComplete;
     protected Transform currentTarget;
@@ -54,6 +58,18 @@ public abstract class BossPatternBase : NetworkBehaviour
         if (warningSprite != null)
         {
             warningSprite.enabled = isOn;
+        }
+    }
+
+    [ClientRpc]
+    protected void SpawnHitVfxClientRpc(Vector2 position, float angle = 0f)
+    {
+        if (hitVfxPrefab != null)
+        {
+            GameObject vfx = Instantiate(hitVfxPrefab, position, Quaternion.Euler(0, 0, angle));
+            vfx.transform.localScale = new Vector3(vfxScaleMultiplier, vfxScaleMultiplier, 1f);
+
+            Destroy(vfx, 2f);
         }
     }
 
