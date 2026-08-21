@@ -10,7 +10,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 6936d060262d77b439f11b4a1bbea034, type: 3}
-  m_Name: TheDead
+  m_Name: normal_stage1_TheDead
   m_EditorClassIdentifier: Assembly-CSharp::EnemyDataSO
   enemyName: Enemy
   maxHP: 100

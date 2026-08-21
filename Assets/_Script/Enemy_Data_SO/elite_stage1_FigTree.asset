@@ -10,29 +10,29 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 6936d060262d77b439f11b4a1bbea034, type: 3}
-  m_Name: Crow
+  m_Name: elite_stage1_FigTree
   m_EditorClassIdentifier: Assembly-CSharp::EnemyDataSO
   enemyName: Enemy
-  maxHP: 45
-  moveSpeed: 2.5
-  defense: 4
-  magicDefense: 4
+  maxHP: 1200
+  moveSpeed: 1
+  defense: 10
+  magicDefense: 10
   evasion: 0
   immuneElements: 0
-  immuneCC: 0
-  attackAttribute: 1
-  baseDamage: 7
+  immuneCC: 15
+  attackAttribute: 0
+  baseDamage: 10
   knockbackForce: 0
   accuracy: 100
   physicalPenetration: 0
   magicPenetration: 0
-  inflictElement: 0
-  elementBuildupAmount: 0
+  inflictElement: 2
+  elementBuildupAmount: 10
   elementDotDamage: 0
   inflictCC: 2
-  attackType: 1
-  attackRange: 4
-  attackCooldown: 6
+  attackType: 0
+  attackRange: 3
+  attackCooldown: 5
   projectileSpeed: 2
   projectileCount: 1
   spreadAngle: 15
