@@ -21,12 +21,10 @@ public class MonsterSpawnerNetcode : NetworkBehaviour
         if (Instance == null) Instance = this;
         else Destroy(gameObject);
     }
+
     public override void OnDestroy()
     {
-        if (Instance == this)
-        {
-            Instance = null;
-        }
+        if (Instance == this) Instance = null;
         base.OnDestroy();
     }
 
@@ -44,10 +42,17 @@ public class MonsterSpawnerNetcode : NetworkBehaviour
         hasBounds = true;
     }
 
+    public void ForceRestartSpawner(StageDataSO stageData)
+    {
+        if (!IsServer) return;
+
+        StopAllCoroutines();
+        InitializeSpawner(stageData);
+    }
+
     public void InitializeSpawner(StageDataSO stageData)
     {
         bool isServerAuthority = NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer;
-        Debug.Log($"[MonsterSpawner] InitializeSpawner 호출됨! (서버 권한: {isServerAuthority}, 데이터 존재: {stageData != null})");
 
         if (!isServerAuthority || stageData == null) return;
 
@@ -77,7 +82,6 @@ public class MonsterSpawnerNetcode : NetworkBehaviour
 
         if (totalSpawnedCount == 0)
         {
-            Debug.LogWarning($"[스포너] {currentFloor}층의 웨이브는 존재하지만, 'Spawn Groups'의 Count가 0이거나 프리팹이 할당되지 않았습니다! StageDataSO 인스펙터를 확인하십시오.");
             CombatStageManager.Instance.StageCleared();
             return;
         }
@@ -93,7 +97,6 @@ public class MonsterSpawnerNetcode : NetworkBehaviour
 
             if (currentWave.spawnGroups != null)
             {
-                // 각 그룹에 정의된 프리팹과 개수만큼 순서대로 스폰
                 foreach (var group in currentWave.spawnGroups)
                 {
                     for (int i = 0; i < group.count; i++)
@@ -118,25 +121,23 @@ public class MonsterSpawnerNetcode : NetworkBehaviour
     private void SpawnMonster(GameObject prefab, Vector3 position)
     {
         if (prefab == null) return;
-        EnemyStatManager statCheck = prefab.GetComponent<EnemyStatManager>();
-        if (statCheck == null)
+
+        if (EnemyPoolManager.Instance != null)
         {
-            Debug.LogError($"[MonsterSpawner] 잘못된 프리팹 스폰 시도! '{prefab.name}' 오브젝트에는 EnemyStatManager가 없습니다. StageDataSO 인스펙터에 투사체나 잘못된 프리팹이 연결되었는지 확인하십시오.");
-            return;
+            EnemyPoolManager.Instance.SpawnEnemy(position);
         }
-
-        GameObject mob = Instantiate(prefab, position, Quaternion.identity);
-
-        // Spawn() must be called BEFORE ApplyScaling,
-        // because ApplyScaling checks IsServer which is only true after Spawn().
-        mob.GetComponent<NetworkObject>().Spawn();
-
-        EnemyStatManager stat = mob.GetComponent<EnemyStatManager>();
-        if (stat != null)
+        else
         {
-            int floor = GameManager.Instance.currentFloor;
-            int playerCount = NetworkManager.Singleton.ConnectedClientsIds.Count;
-            stat.ApplyScaling(floor, Mathf.Max(1, playerCount));
+            GameObject mob = Instantiate(prefab, position, Quaternion.identity);
+            mob.GetComponent<NetworkObject>().Spawn();
+
+            EnemyStatManager stat = mob.GetComponent<EnemyStatManager>();
+            if (stat != null)
+            {
+                int floor = GameManager.Instance.currentFloor;
+                int playerCount = NetworkManager.Singleton.ConnectedClientsIds.Count;
+                stat.ApplyScaling(floor, Mathf.Max(1, playerCount));
+            }
         }
     }
 

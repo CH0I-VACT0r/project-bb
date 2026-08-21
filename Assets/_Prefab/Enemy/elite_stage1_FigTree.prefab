@@ -28,15 +28,15 @@ RectTransform:
   m_GameObject: {fileID: 1545931332176501901}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 0.5, y: 0.5, z: 1}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1296360309268069209}
-  m_Father: {fileID: 4660628435272785927}
+  m_Father: {fileID: 7012077828106562238}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchoredPosition: {x: -1, y: -1}
   m_SizeDelta: {x: 1, y: 1}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!223 &3049737995656305663
@@ -207,7 +207,8 @@ Transform:
   m_LocalPosition: {x: 0.15, y: 0.15, z: 0}
   m_LocalScale: {x: 0.15, y: 0.15, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 468871330080237}
   m_Father: {fileID: 4660628435272785927}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!212 &4847972752450031800
@@ -690,9 +691,6 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 2013865098204146698, guid: d7c6196ef90d05c40b420b83a4bc63ae, type: 3}
       insertIndex: -1
       addedObject: {fileID: 7012077828106562238}
-    - targetCorrespondingSourceObject: {fileID: 2013865098204146698, guid: d7c6196ef90d05c40b420b83a4bc63ae, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 468871330080237}
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 3338262658013833214, guid: d7c6196ef90d05c40b420b83a4bc63ae, type: 3}
       insertIndex: -1
@@ -780,18 +778,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BossPattern_SpiralProjectiles
   ShowTopMostFoldoutHeaderGroup: 1
-  patternCooldown: 8
+  patternCooldown: 5
   patternWeight: 1
   animatorTriggerName: Pattern1
   warningSprite: {fileID: 4847972752450031800}
   hitVfxPrefab: {fileID: 0}
   vfxScaleMultiplier: 1
   patternData: {fileID: 11400000, guid: bc8fb0b642742c84ab7409bcd67f096e, type: 2}
-  totalArms: 1
-  projectilesPerArm: 30
+  totalArms: 2
+  projectilesPerArm: 60
   spawnInterval: 0.1
   angleIncrement: 15
-  isClockwise: 0
+  isClockwise: 1
   postPatternDelay: 1
 --- !u!114 &1087945434213798410
 MonoBehaviour:
@@ -806,22 +804,22 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BossPattern_RandomAoE
   ShowTopMostFoldoutHeaderGroup: 1
-  patternCooldown: 9
+  patternCooldown: 5
   patternWeight: 1
   animatorTriggerName: Pattern2
   warningSprite: {fileID: 0}
   hitVfxPrefab: {fileID: 0}
   vfxScaleMultiplier: 1
-  aoeCount: 4
-  spawnRadius: 10
+  aoeCount: 6
+  spawnRadius: 5
   chargeTime: 1.5
   damage: 15
   playerLayer:
     serializedVersion: 2
     m_Bits: 64
-  windupAnimatorTriggerName: Charge_Winding
-  attackShape: 0
-  attackSize: {x: 3, y: 3}
+  windupAnimatorTriggerName: Pattern2
+  attackShape: 1
+  attackSize: {x: 2, y: 1}
   sectorAngle: 90
   aoeIndicatorPrefab: {fileID: 1545931332176501901}
 --- !u!114 &8610717946581433586
@@ -843,7 +841,7 @@ MonoBehaviour:
   warningSprite: {fileID: 0}
   hitVfxPrefab: {fileID: 0}
   vfxScaleMultiplier: 1
-  sporePrefab: {fileID: 0}
+  sporePrefab: {fileID: 3693128985954695575, guid: 7d312c05404af8d4580425b7251c65a3, type: 3}
   sporeDuration: 5
   strikeCount: 2
   strikeWindup: 0.25
@@ -854,4 +852,4 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 64
   aoeIndicatorPrefab: {fileID: 1545931332176501901}
-  attackAnimatorTrigger: Attack_Stab
+  attackAnimatorTrigger: Pattern3
