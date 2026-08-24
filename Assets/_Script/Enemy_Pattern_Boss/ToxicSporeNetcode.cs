@@ -11,8 +11,19 @@ public class ToxicSporeNetcode : NetworkBehaviour
     [Tooltip("적용할 이동 속도 배율 (예: 0.5 = 50% 느려짐)")]
     public float slowMultiplier = 0.5f;
 
-    // 장판 안에 있는 플레이어들을 추적하여, 장판 소멸 시 안전하게 복구하기 위한 리스트
+    [Header("Animation Settings")]
+    [Tooltip("소멸 애니메이션이 재생되는 시간 (이 시간만큼 먼저 애니메이션이 시작됨)")]
+    public float fadeOutDuration = 0.5f;
+    [Tooltip("애니메이터에 설정할 소멸 트리거 이름")]
+    public string fadeOutTriggerName = "FadeOut";
+
     private HashSet<Collider2D> playersInZone = new HashSet<Collider2D>();
+    private Animator anim;
+
+    private void Awake()
+    {
+        anim = GetComponent<Animator>();
+    }
 
     public override void OnNetworkSpawn()
     {
@@ -24,14 +35,35 @@ public class ToxicSporeNetcode : NetworkBehaviour
 
     private IEnumerator LifeTimeRoutine()
     {
-        yield return new WaitForSeconds(lifeTime);
+        // 1. 소멸 애니메이션이 시작되기 전까지 대기
+        float waitTime = Mathf.Max(0f, lifeTime - fadeOutDuration);
+        yield return new WaitForSeconds(waitTime);
+
+        // 2. 소멸 애니메이션 재생 시점 도달: 모든 클라이언트에 트리거 발동 지시
+        if (!string.IsNullOrEmpty(fadeOutTriggerName))
+        {
+            TriggerFadeOutClientRpc(fadeOutTriggerName);
+        }
+
+        // 3. 애니메이션이 재생되는 시간만큼 추가 대기
+        yield return new WaitForSeconds(fadeOutDuration);
+
+        // 4. 수명이 완전히 끝났으므로 서버 권위 하에 실제 오브젝트 파괴
         if (IsServer && NetworkObject.IsSpawned)
         {
             NetworkObject.Despawn(true);
         }
     }
 
-    // 트리거(장판)에 들어왔을 때
+    [ClientRpc]
+    private void TriggerFadeOutClientRpc(string triggerName)
+    {
+        if (anim != null)
+        {
+            anim.SetTrigger(triggerName);
+        }
+    }
+
     private void OnTriggerEnter2D(Collider2D other)
     {
         if (!IsServer) return;
@@ -43,7 +75,6 @@ public class ToxicSporeNetcode : NetworkBehaviour
         }
     }
 
-    // 트리거(장판)에서 나갔을 때
     private void OnTriggerExit2D(Collider2D other)
     {
         if (!IsServer) return;
@@ -55,7 +86,6 @@ public class ToxicSporeNetcode : NetworkBehaviour
         }
     }
 
-    // 장판 수명이 다해 강제 소멸될 때 (OnTriggerExit이 호출되지 않는 상황 대비)
     public override void OnNetworkDespawn()
     {
         if (IsServer)
@@ -71,7 +101,6 @@ public class ToxicSporeNetcode : NetworkBehaviour
         }
     }
 
-    // 실제 플레이어 스크립트에 접근하여 속도를 제어하는 함수
     private void ApplySlow(Collider2D playerCol, bool isSlowed)
     {
         var statusManager = playerCol.GetComponent<StatusEffectManagerNetcode>();
@@ -80,8 +109,6 @@ public class ToxicSporeNetcode : NetworkBehaviour
         {
             float currentMultiplier = isSlowed ? slowMultiplier : 1.0f;
             statusManager.moveSpeedMultiplier.Value = currentMultiplier;
-
-            Debug.Log($"[서버] {playerCol.name}에게 둔화 장판 적용: {isSlowed} (현재 배율: {currentMultiplier})");
         }
     }
 }

@@ -13,9 +13,10 @@ public abstract class BossPatternBase : NetworkBehaviour
     public string animatorTriggerName;
     [Header("Warning Visuals")]
     public SpriteRenderer warningSprite;
-    [Tooltip("타격 발생 시 해당 위치에 생성할 VFX 프리팹 (선택)")]
-    public GameObject hitVfxPrefab;
-    [Tooltip("VFX 크기 배율 (기본값 1)")]
+    [Tooltip("공용 VFX 프리팹 (Generic_Hit_VFX 할당)")]
+    public GameObject genericVfxPrefab;
+    [Tooltip("재생할 VFX 애니메이터 컨트롤러")]
+    public RuntimeAnimatorController vfxAnimatorController;
     public float vfxScaleMultiplier = 1.0f;
 
     protected Action onPatternComplete;
@@ -64,12 +65,20 @@ public abstract class BossPatternBase : NetworkBehaviour
     [ClientRpc]
     protected void SpawnHitVfxClientRpc(Vector2 position, float angle = 0f)
     {
-        if (hitVfxPrefab != null)
+        if (genericVfxPrefab != null && vfxAnimatorController != null)
         {
-            GameObject vfx = Instantiate(hitVfxPrefab, position, Quaternion.Euler(0, 0, angle));
+            // 1. 공용 껍데기 스폰
+            GameObject vfx = Instantiate(genericVfxPrefab, position, Quaternion.Euler(0, 0, angle));
             vfx.transform.localScale = new Vector3(vfxScaleMultiplier, vfxScaleMultiplier, 1f);
 
-            Destroy(vfx, 2f);
+            // 2. 내부 애니메이터 컨트롤러 덮어쓰기
+            Animator anim = vfx.GetComponent<Animator>();
+            if (anim != null)
+            {
+                anim.runtimeAnimatorController = vfxAnimatorController;
+            }
+
+            // 삭제는 VfxAutoDestroyer가 애니메이션 클립 길이에 맞춰 알아서 처리합니다.
         }
     }
 

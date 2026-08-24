@@ -6,7 +6,7 @@ AnimationClip:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: FigTree_AttackEndWalking
+  m_Name: Vfx_Burst_white
   serializedVersion: 7
   m_Legacy: 0
   m_Compressed: 0
@@ -21,9 +21,9 @@ AnimationClip:
   - serializedVersion: 2
     curve:
     - time: 0
-      value: {fileID: 4553631463758839353, guid: c3f2db794c711634498cbfcd93ed8686, type: 3}
+      value: {fileID: 21300000, guid: 7b3c0325ec025dc4c9fc08ea4f0cfbbb, type: 2}
     - time: 0.083333336
-      value: {fileID: 429326150174454203, guid: c3f2db794c711634498cbfcd93ed8686, type: 3}
+      value: {fileID: 21300000, guid: 1cfd613548fa06249bbcb520de5fd66a, type: 2}
     attribute: m_Sprite
     path: 
     classID: 212
@@ -46,8 +46,8 @@ AnimationClip:
       isIntCurve: 0
       isSerializeReferenceCurve: 0
     pptrCurveMapping:
-    - {fileID: 4553631463758839353, guid: c3f2db794c711634498cbfcd93ed8686, type: 3}
-    - {fileID: 429326150174454203, guid: c3f2db794c711634498cbfcd93ed8686, type: 3}
+    - {fileID: 21300000, guid: 7b3c0325ec025dc4c9fc08ea4f0cfbbb, type: 2}
+    - {fileID: 21300000, guid: 1cfd613548fa06249bbcb520de5fd66a, type: 2}
   m_AnimationClipSettings:
     serializedVersion: 2
     m_AdditiveReferencePoseClip: {fileID: 0}
@@ -58,7 +58,7 @@ AnimationClip:
     m_Level: 0
     m_CycleOffset: 0
     m_HasAdditiveReferencePose: 0
-    m_LoopTime: 0
+    m_LoopTime: 1
     m_LoopBlend: 0
     m_LoopBlendOrientation: 0
     m_LoopBlendPositionY: 0

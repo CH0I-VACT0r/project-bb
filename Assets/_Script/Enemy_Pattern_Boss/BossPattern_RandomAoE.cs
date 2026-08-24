@@ -25,6 +25,8 @@ public class BossPattern_RandomAoE : BossPatternBase
     [Header("AoE Visuals")]
     [Tooltip("World Space Canvas가 세팅된 장판 프리팹을 넣으세요")]
     public GameObject aoeIndicatorPrefab;
+    [Tooltip("차지 시작 시 보스에게서 생성되어 AoE 위치로 날아갈 투사체 스프라이트")]
+    public GameObject flyingProjectilePrefab;
 
     private List<GameObject> activeIndicators = new List<GameObject>();
 
@@ -131,8 +133,38 @@ public class BossPattern_RandomAoE : BossPatternBase
                 SetupVisual(fillImage, angles[i]);
                 StartCoroutine(FillVisualRoutine(fillImage));
             }
+
+            if (flyingProjectilePrefab != null)
+            {
+                Vector2 dir = new Vector2(Mathf.Cos(angles[i] * Mathf.Deg2Rad), Mathf.Sin(angles[i] * Mathf.Deg2Rad));
+
+                Vector2 startPos = positions[i] - (dir * attackSize.x);
+                Vector2 endPos = positions[i] + (dir * attackSize.x);
+
+                GameObject flyingObj = Instantiate(flyingProjectilePrefab, startPos, Quaternion.Euler(0, 0, angles[i]));
+
+                StartCoroutine(SweepProjectileRoutine(flyingObj, startPos, endPos, chargeTime, 0.15f));
+            }
         }
     }
+    private IEnumerator SweepProjectileRoutine(GameObject obj, Vector2 start, Vector2 end, float waitTime, float moveTime)
+    {
+        // 1. 차지 시간 동안 제자리(시작점)에 생성된 채로 대기
+        yield return new WaitForSeconds(waitTime);
+
+        // 2. 공격 발동 시점에 맞춰 목적지로 이동
+        float elapsed = 0f;
+        while (elapsed < moveTime)
+        {
+            if (obj == null) break;
+            obj.transform.position = Vector2.Lerp(start, end, elapsed / moveTime);
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+
+        if (obj != null) Destroy(obj);
+    }
+
 
     private void SetupVisual(Image aoeFillImage, float rotationAngle)
     {

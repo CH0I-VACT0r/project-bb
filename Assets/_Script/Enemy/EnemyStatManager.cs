@@ -16,6 +16,8 @@ public class EnemyStatManager : NetworkBehaviour, IDamageable
     [HideInInspector] public float defense;
     [HideInInspector] public float magicDefense;
     [HideInInspector] public float evasion;
+    [HideInInspector]
+    public bool isSummonedMinion = false;
 
     private Rigidbody2D rb;
     public bool isStunned = false;
@@ -153,10 +155,9 @@ public class EnemyStatManager : NetworkBehaviour, IDamageable
         
         if (IsServer)
         {
-            MonsterSpawnerNetcode spawner = FindFirstObjectByType<MonsterSpawnerNetcode>();
-            if (spawner != null)
+            if (!isSummonedMinion && MonsterSpawnerNetcode.Instance != null)
             {
-                spawner.OnMonsterDead();
+                MonsterSpawnerNetcode.Instance.OnMonsterDead();
             }
         }
 

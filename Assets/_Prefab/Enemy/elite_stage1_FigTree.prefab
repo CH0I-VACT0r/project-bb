@@ -415,11 +415,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3012036235855085303, guid: d7c6196ef90d05c40b420b83a4bc63ae, type: 3}
       propertyPath: m_Radius
-      value: 0.5
+      value: 0.4
       objectReference: {fileID: 0}
     - target: {fileID: 3012036235855085303, guid: d7c6196ef90d05c40b420b83a4bc63ae, type: 3}
       propertyPath: m_Offset.x
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3012036235855085303, guid: d7c6196ef90d05c40b420b83a4bc63ae, type: 3}
+      propertyPath: m_Offset.y
+      value: -0.1
       objectReference: {fileID: 0}
     - target: {fileID: 3338262658013833214, guid: d7c6196ef90d05c40b420b83a4bc63ae, type: 3}
       propertyPath: m_Name
@@ -720,6 +724,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 3338262658013833214, guid: d7c6196ef90d05c40b420b83a4bc63ae, type: 3}
       insertIndex: -1
       addedObject: {fileID: 8610717946581433586}
+    - targetCorrespondingSourceObject: {fileID: 3338262658013833214, guid: d7c6196ef90d05c40b420b83a4bc63ae, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: -4476303141513342043}
   m_SourcePrefab: {fileID: 100100000, guid: d7c6196ef90d05c40b420b83a4bc63ae, type: 3}
 --- !u!95 &77155179491589233 stripped
 Animator:
@@ -777,10 +784,12 @@ MonoBehaviour:
   phase1Patterns:
   - {fileID: 5272901512538778304}
   - {fileID: 1087945434213798410}
+  - {fileID: -4476303141513342043}
   phase2Patterns:
   - {fileID: 5272901512538778304}
   - {fileID: 1087945434213798410}
   - {fileID: 8610717946581433586}
+  - {fileID: -4476303141513342043}
 --- !u!114 &5272901512538778304
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -798,12 +807,13 @@ MonoBehaviour:
   patternWeight: 1
   animatorTriggerName: Attack
   warningSprite: {fileID: 4847972752450031800}
-  hitVfxPrefab: {fileID: 0}
+  genericVfxPrefab: {fileID: 0}
+  vfxAnimatorController: {fileID: 0}
   vfxScaleMultiplier: 1
   patternData: {fileID: 11400000, guid: bc8fb0b642742c84ab7409bcd67f096e, type: 2}
   totalArms: 2
   projectilesPerArm: 60
-  spawnInterval: 0.1
+  spawnInterval: 0.2
   angleIncrement: 15
   isClockwise: 1
   postPatternDelay: 1
@@ -824,20 +834,22 @@ MonoBehaviour:
   patternWeight: 1
   animatorTriggerName: Attack
   warningSprite: {fileID: 0}
-  hitVfxPrefab: {fileID: 0}
-  vfxScaleMultiplier: 1
-  aoeCount: 6
-  spawnRadius: 5
-  chargeTime: 1.5
-  damage: 15
+  genericVfxPrefab: {fileID: 2806383415613849897, guid: 42a18b784e1bd3a4786b3c11ec433318, type: 3}
+  vfxAnimatorController: {fileID: 9100000, guid: 1e629c3f187a4a54289fa70c5bbc0d6c, type: 2}
+  vfxScaleMultiplier: 3
+  aoeCount: 12
+  spawnRadius: 3
+  chargeTime: 1
+  damage: 10
   playerLayer:
     serializedVersion: 2
     m_Bits: 64
   windupAnimatorTriggerName: AttackEnd
   attackShape: 1
-  attackSize: {x: 2, y: 1}
+  attackSize: {x: 5, y: 1}
   sectorAngle: 90
   aoeIndicatorPrefab: {fileID: 1545931332176501901}
+  flyingProjectilePrefab: {fileID: 0}
 --- !u!114 &8610717946581433586
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -851,21 +863,49 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BossPattern_ToxicRoots
   ShowTopMostFoldoutHeaderGroup: 1
-  patternCooldown: 7
-  patternWeight: 1
+  patternCooldown: 5
+  patternWeight: 2
   animatorTriggerName: Attack
   warningSprite: {fileID: 0}
-  hitVfxPrefab: {fileID: 0}
-  vfxScaleMultiplier: 1
+  genericVfxPrefab: {fileID: 2806383415613849897, guid: 42a18b784e1bd3a4786b3c11ec433318, type: 3}
+  vfxAnimatorController: {fileID: 9100000, guid: 17db8091220a0a248a8651da59c74aa0, type: 2}
+  vfxScaleMultiplier: 2
   sporePrefab: {fileID: 3693128985954695575, guid: 7d312c05404af8d4580425b7251c65a3, type: 3}
-  sporeDuration: 5
+  sporeDuration: 3
   strikeCount: 2
-  strikeWindup: 0.25
-  strikeInterval: 0.2
-  damage: 15
-  strikeSize: {x: 5, y: 1}
+  strikeWindup: 0.5
+  strikeInterval: 0.25
+  damage: 10
+  strikeSize: {x: 6, y: 2}
   playerLayer:
     serializedVersion: 2
     m_Bits: 64
   aoeIndicatorPrefab: {fileID: 1545931332176501901}
   attackAnimatorTrigger: AttackEnd
+  sporeFlyingVisualPrefab: {fileID: 0}
+  sporeFlightDuration: 1
+  sporeArcHeight: 3
+--- !u!114 &-4476303141513342043
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8434304554716802035}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 29582cee9c2b0df4db8b0971f3dbf2e4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BossPattern_SummonAdds
+  ShowTopMostFoldoutHeaderGroup: 1
+  patternCooldown: 6
+  patternWeight: 0.4
+  animatorTriggerName: Attack
+  warningSprite: {fileID: 0}
+  genericVfxPrefab: {fileID: 0}
+  vfxAnimatorController: {fileID: 0}
+  vfxScaleMultiplier: 1
+  minionPrefab: {fileID: 8434304554716802035, guid: c8293e583571a3f46bc5ae6d1e906a72, type: 3}
+  summonCount: 10
+  spawnRadius: 3
+  spawnDelay: 0.25

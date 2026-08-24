@@ -91,6 +91,13 @@ public class MonsterSpawnerNetcode : NetworkBehaviour
 
     private IEnumerator SpawnWaveRoutine(FloorSpawnData floorData)
     {
+        // ★ 추가됨: 현재 방의 타입 확인
+        StageRoomType roomType = StageRoomType.Combat;
+        if (GameManager.Instance != null)
+        {
+            roomType = GameManager.Instance.nextRoomType;
+        }
+
         for (int w = 0; w < floorData.waves.Length; w++)
         {
             WaveSpawnData currentWave = floorData.waves[w];
@@ -103,7 +110,16 @@ public class MonsterSpawnerNetcode : NetworkBehaviour
                     {
                         if (group.monsterPrefab != null)
                         {
-                            Vector3 spawnPos = GetValidSpawnPosition();
+                            Vector3 spawnPos;
+                            if (roomType == StageRoomType.Boss || roomType == StageRoomType.Elite)
+                            {
+                                spawnPos = Vector3.zero;
+                            }
+                            else
+                            {
+                                spawnPos = GetValidSpawnPosition();
+                            }
+
                             SpawnMonster(group.monsterPrefab, spawnPos);
                         }
                         yield return new WaitForSeconds(0.3f);

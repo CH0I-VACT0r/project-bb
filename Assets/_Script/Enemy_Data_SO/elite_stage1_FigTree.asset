@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: elite_stage1_FigTree
   m_EditorClassIdentifier: Assembly-CSharp::EnemyDataSO
   enemyName: Enemy
-  maxHP: 1200
+  maxHP: 3000
   moveSpeed: 1
   defense: 10
   magicDefense: 10
@@ -21,13 +21,13 @@ MonoBehaviour:
   immuneElements: 0
   immuneCC: 15
   attackAttribute: 0
-  baseDamage: 10
+  baseDamage: 5
   knockbackForce: 0
   accuracy: 100
   physicalPenetration: 0
   magicPenetration: 0
   inflictElement: 2
-  elementBuildupAmount: 10
+  elementBuildupAmount: 5
   elementDotDamage: 0
   inflictCC: 2
   attackType: 0

@@ -22,6 +22,11 @@ public class BossPattern_ToxicRoots : BossPatternBase
     public GameObject aoeIndicatorPrefab;
     public string attackAnimatorTrigger = "Attack_Stab";
 
+    [Tooltip("하늘을 날아가는 궤적을 보여줄 단순 시각용 프리팹")]
+    public GameObject sporeFlyingVisualPrefab;
+    public float sporeFlightDuration = 1.0f;
+    public float sporeArcHeight = 3.0f;
+
     protected override void OnPatternStart()
     {
         if (!IsServer) return;
@@ -30,47 +35,77 @@ public class BossPattern_ToxicRoots : BossPatternBase
 
     private IEnumerator ToxicRootsRoutine()
     {
-        // 플레이어 현재 위치에 독립된 둔화 장판 스폰
-        if (currentTarget != null && sporePrefab != null)
+        Vector2 targetPos = currentTarget != null ? (Vector2)currentTarget.position : (Vector2)transform.position + Vector2.right;
+
+        // 1. 포물선 시각 효과를 모든 클라이언트에 재생 지시
+        ShootSporeVisualClientRpc(transform.position, targetPos, sporeFlightDuration);
+
+        if (!string.IsNullOrEmpty(animatorTriggerName)) PlayPatternAnimationClientRpc(animatorTriggerName);
+
+        // 2. 날아가는 시간(Flight Duration)만큼 서버도 대기
+        yield return new WaitForSeconds(sporeFlightDuration);
+
+        // 3. 도달 시점에 서버에서 실제 장판(NetworkObject) 스폰
+        if (sporePrefab != null)
         {
-            GameObject spore = Instantiate(sporePrefab, currentTarget.position, Quaternion.identity);
+            GameObject spore = Instantiate(sporePrefab, targetPos, Quaternion.identity);
+            // ★ 꺾쇠 공백 적용
             NetworkObject netObj = spore.GetComponent<NetworkObject>();
-            if (netObj != null)
-            {
-                netObj.Spawn();
-                // 장판 삭제는 spore 내부 스크립트에서 netObj.Despawn()을 호출하는 것이 정석입니다.
-            }
+            if (netObj != null) netObj.Spawn();
         }
 
-        // 직사각형 뿌리 찌르기 연속 시전
+        // 4. 직사각형 뿌리 찌르기 연속 시전 로직 (복구됨)
         for (int i = 0; i < strikeCount; i++)
         {
-            // 매 타격마다 플레이어의 최신 위치를 추적하여 각도 갱신
-            Vector2 targetPos = currentTarget != null ? (Vector2)currentTarget.position : (Vector2)transform.position + Vector2.right;
-            Vector2 attackDir = (targetPos - (Vector2)transform.position).normalized;
+            // 타겟 방향 계산
+            Vector2 aimTarget = currentTarget != null ? (Vector2)currentTarget.position : (Vector2)transform.position + Vector2.right;
+            Vector2 attackDir = (aimTarget - (Vector2)transform.position).normalized;
+
+            // 5단위 각도 강제 정렬
             float rawAngle = Mathf.Atan2(attackDir.y, attackDir.x) * Mathf.Rad2Deg;
             float angle = Mathf.Round(rawAngle / 5f) * 5f;
             attackDir = new Vector2(Mathf.Cos(angle * Mathf.Deg2Rad), Mathf.Sin(angle * Mathf.Deg2Rad));
 
-            // 클라이언트에게 인디케이터 표시 지시
+            // 클라이언트에 찌르기 인디케이터 생성 지시
             ShowStrikeIndicatorClientRpc(transform.position, angle, strikeWindup);
 
-            if (!string.IsNullOrEmpty(attackAnimatorTrigger))
-            {
-                PlayPatternAnimationClientRpc(attackAnimatorTrigger);
-            }
-
-            // 0.25초 대기 (Windup)
+            // 찌르기 선딜레이(Windup) 대기
             yield return new WaitForSeconds(strikeWindup);
 
-            // 대미지 판정
+            // 대미지 판정 및 타격 VFX 생성
             ExecuteStrikeDamage(attackDir, angle);
 
-            // 다음 타격까지 대기 (0.2초 간격)
+            // 다음 찌르기까지 간격 대기
             yield return new WaitForSeconds(strikeInterval);
         }
-
         FinishPattern();
+    }
+
+    [ClientRpc]
+    private void ShootSporeVisualClientRpc(Vector2 start, Vector2 end, float duration)
+    {
+        if (sporeFlyingVisualPrefab == null) return;
+        GameObject visual = Instantiate(sporeFlyingVisualPrefab, start, Quaternion.identity);
+        StartCoroutine(SporeParabolaRoutine(visual, start, end, duration));
+    }
+
+    private IEnumerator SporeParabolaRoutine(GameObject visual, Vector2 start, Vector2 end, float duration)
+    {
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            if (visual == null) break;
+            float t = elapsed / duration;
+
+            Vector2 currentPos = Vector2.Lerp(start, end, t);
+            float height = Mathf.Sin(t * Mathf.PI) * sporeArcHeight;
+
+            visual.transform.position = new Vector2(currentPos.x, currentPos.y + height);
+
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+        if (visual != null) Destroy(visual);
     }
 
     private void ExecuteStrikeDamage(Vector2 attackDir, float angle)
@@ -132,7 +167,6 @@ public class BossPattern_ToxicRoots : BossPatternBase
             yield return null;
         }
 
-        // 게이지가 다 차면(0.25초) 인디케이터 즉시 삭제
         if (indObj != null) Destroy(indObj);
     }
 }
